@@ -1,0 +1,1212 @@
+--[[
+    ╔═══════════════════════════════════════════════════════════╗
+    ║   LUNAR PREMIUM v5 — Combat Suite                         ║
+    ║   Modules: SilentAim · Aimbot · Camera · Farm · Fly · ESP ║
+    ║   Theme engine · Config persistence · Target modes         ║
+    ║   Executor: Delta / Fluxus / Krnl / Codex / Synapse / Wave ║
+    ╚═══════════════════════════════════════════════════════════╝
+--]]
+
+-- ============================================================
+-- SERVICES
+-- ============================================================
+local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
+local UIS              = game:GetService("UserInputService")
+local Workspace        = game:GetService("Workspace")
+local CoreGui          = game:GetService("CoreGui")
+local TweenService     = game:GetService("TweenService")
+local HttpService      = game:GetService("HttpService")
+local Stats            = game:GetService("Stats")
+
+local LP     = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local Mouse  = LP:GetMouse()
+
+-- ============================================================
+-- HARDENING LAYER
+-- ============================================================
+pcall(function()
+    if setthreadidentity then setthreadidentity(8) end
+    if syn and syn.set_thread_identity then syn.set_thread_identity(8) end
+    if KRNL_LOADED and setthreadidentity then setthreadidentity(8) end
+end)
+
+-- Hide call origin
+pcall(function()
+    local realGetCallingScript = getcallingscript
+    getcallingscript = function() return LP.Character or game end
+    getcallingscriptname = function() return "LocalScript" end
+end)
+
+-- Secure parent (avoid CoreGui name-based scans)
+local function secureParent(o)
+    local ok = pcall(function() o.Parent = CoreGui end)
+    if not ok then
+        local pg = LP:FindFirstChildOfClass("PlayerGui") or LP:WaitForChild("PlayerGui")
+        local h = pg:FindFirstChild("RobloxChat") or Instance.new("Folder", pg)
+        h.Name = "RobloxChat"
+        o.Parent = h
+    end
+end
+
+-- ============================================================
+-- CONFIG
+-- ============================================================
+local Config = {
+    Theme = "Neon",   -- Neon | Blood | Void | Gold | Ice
+    -- SilentAim
+    SilentAim = {
+        Enabled = false,
+        Key = Enum.UserInputType.MouseButton1,
+        Mode = "Head",         -- Head | Torso | Random | Nearest-Limb
+        TeamCheck = true,
+        WallCheck = true,
+        FOV = 250,
+        HitChance = 100,
+        Prediction = 0.165,
+        AutoFire = false,
+        AutoFireDelay = 0.05,
+    },
+    -- Legit Aimbot
+    Aimbot = {
+        Enabled = false,
+        Key = Enum.UserInputType.MouseButton2,
+        Mode = "Head",
+        TeamCheck = true,
+        WallCheck = true,
+        FOV = 120,
+        Smoothness = 0.22,
+        Prediction = 0.165,
+        VisibleRay = true,
+        StickyAim = true,      -- stay locked once acquired
+        TargetBone = "Nearest",
+    },
+    -- Camera
+    Camera = {
+        Enabled = false,
+        Mode = "Track",        -- Track | Lock | ThirdPerson
+        Smoothness = 0.15,
+        OffsetY = 0,
+        OffsetZ = 0,
+        RotateWithTarget = false,
+    },
+    -- Farm
+    Farm = {
+        Enabled = false,
+        Mode = "Mount",        -- Mount (back-lock) | Orbit | Snipe
+        TargetScope = "Server",-- Nearest | Server | Random
+        Speed = 110,
+        MountDistance = 2.5,
+        MountHeight = 2.0,
+        KillDelay = 0.15,
+        HitsPerTarget = 2,
+        MaxRange = 3000,
+        CameraFollow = true,
+        AnimLoop = true,       -- swing animation on mount
+    },
+    -- Fly
+    Fly = {
+        Enabled = false,
+        Speed = 60,
+        Key = Enum.KeyCode.F,
+        VerticalBoost = 1.6,
+    },
+    -- ESP
+    ESP = {
+        Enabled = false,
+        Box = true,
+        Name = true,
+        Health = true,
+        Distance = true,
+        Skeleton = true,
+        Tracer = true,
+        HeadDot = true,
+        TeamCheck = true,
+        MaxDistance = 2000,
+    },
+    -- Misc
+    Misc = {
+        AntiAFK = true,
+        NoClip = false,
+        Fullbright = false,
+        FOV = 90,
+    },
+}
+
+-- ============================================================
+-- THEME ENGINE
+-- ============================================================
+local Themes = {
+    Neon  = { accent = Color3.fromRGB(0,255,170),  bg = Color3.fromRGB(14,14,18),  panel = Color3.fromRGB(22,22,28),  text = Color3.fromRGB(220,220,220), sub = Color3.fromRGB(170,170,170), danger = Color3.fromRGB(255,80,80) },
+    Blood = { accent = Color3.fromRGB(255,40,40),  bg = Color3.fromRGB(12,8,8),   panel = Color3.fromRGB(24,12,12),  text = Color3.fromRGB(230,210,210), sub = Color3.fromRGB(180,140,140), danger = Color3.fromRGB(255,120,120) },
+    Void  = { accent = Color3.fromRGB(160,60,255), bg = Color3.fromRGB(8,6,14),   panel = Color3.fromRGB(16,12,26),  text = Color3.fromRGB(220,210,255), sub = Color3.fromRGB(160,150,200), danger = Color3.fromRGB(255,80,120) },
+    Gold  = { accent = Color3.fromRGB(255,200,60), bg = Color3.fromRGB(14,12,6),  panel = Color3.fromRGB(24,20,10),  text = Color3.fromRGB(240,230,200), sub = Color3.fromRGB(190,170,120), danger = Color3.fromRGB(255,140,80) },
+    Ice   = { accent = Color3.fromRGB(80,200,255), bg = Color3.fromRGB(8,12,16),  panel = Color3.fromRGB(14,20,28),  text = Color3.fromRGB(210,230,245), sub = Color3.fromRGB(150,180,200), danger = Color3.fromRGB(255,100,100) },
+}
+
+local function T() return Themes[Config.Theme] or Themes.Neon end
+
+-- ============================================================
+-- UTIL
+-- ============================================================
+local Util = {}
+
+function Util.isAlive(p)
+    local c = p.Character
+    if not c then return false end
+    local h = c:FindFirstChildOfClass("Humanoid")
+    return h and h.Health > 0
+end
+
+function Util.root(p)
+    local c = p.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+function Util.part(p, mode)
+    local c = p.Character
+    if not c then return nil end
+    if mode == "Random" or mode == "Nearest" then
+        local parts = { "Head", "UpperTorso", "LowerTorso", "LeftUpperArm", "RightUpperArm" }
+        local best, bestD = nil, math.huge
+        for _, n in ipairs(parts) do
+            local part = c:FindFirstChild(n)
+            if part then
+                local d = (part.Position - Camera.CFrame.Position).Magnitude
+                if d < bestD then best, bestD = part, d end
+            end
+        end
+        return best
+    elseif mode == "Head" then
+        return c:FindFirstChild("Head")
+    elseif mode == "Torso" then
+        return c:FindFirstChild("UpperTorso")
+            or c:FindFirstChild("Torso")
+            or c:FindFirstChild("HumanoidRootPart")
+    end
+    return c:FindFirstChild("Head")
+end
+
+function Util.team(p)
+    return p.Team ~= nil and p.Team == LP.Team
+end
+
+function Util.visible(part)
+    if not part then return false end
+    local origin = Camera.CFrame.Position
+    local dir = part.Position - origin
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { LP.Character, Camera }
+    params.IgnoreWater = true
+    local hit = Workspace:Raycast(origin, dir, params)
+    return hit == nil or hit.Instance:IsDescendantOf(part.Parent)
+end
+
+-- ============================================================
+-- TARGET MANAGER
+-- ============================================================
+local Target = {}
+Target.locked = nil
+
+function Target.acquire(fov, teamCheck, wallCheck, mode, scope)
+    scope = scope or "Nearest"
+    local best, bestScore = nil, math.huge
+    local cx, cy = Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p == LP or not Util.isAlive(p) then continue end
+        if teamCheck and Util.team(p) then continue end
+
+        local part = Util.part(p, mode)
+        if not part then continue end
+
+        if scope == "Nearest" then
+            local sp, on = Camera:WorldToViewportPoint(part.Position)
+            if not on then continue end
+            local d = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
+            if d > fov then continue end
+            if wallCheck and not Util.visible(part) then continue end
+            if d < bestScore then best, bestScore = p, d end
+        else
+            -- Server scope: any distance, still FOV-filtered if fov > 0
+            local root = Util.root(p)
+            if not root then continue end
+            local d = (root.Position - Camera.CFrame.Position).Magnitude
+            if fov > 0 then
+                local sp, on = Camera:WorldToViewportPoint(part.Position)
+                if not on then continue end
+                local sd = (Vector2.new(sp.X, sp.Y) - Vector2.new(cx, cy)).Magnitude
+                if sd > fov then continue end
+            end
+            if wallCheck and not Util.visible(part) then continue end
+            if d < bestScore then best, bestScore = p, d end
+        end
+    end
+    return best
+end
+
+function Target.predict(part, root, amount)
+    local pos = part.Position
+    if root and amount > 0 then
+        pos = pos + root.AssemblyLinearVelocity * amount
+    end
+    return pos
+end
+
+-- ============================================================
+-- SILENT AIM (guarded + modern Raycast + legacy Ray)
+-- ============================================================
+local hookBusy = false
+
+local ok, mt = pcall(getrawmetatable, game)
+if ok and mt then
+    local oldNamecall = mt.__namecall
+    setreadonly(mt, false)
+
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+
+        if hookBusy
+           or not Config.SilentAim.Enabled
+           or checkcaller()
+           or typeof(method) ~= "string" then
+            return oldNamecall(self, ...)
+        end
+
+        local isLegacy = method:sub(1, 13) == "FindPartOnRay"
+        local isModern = (method == "Raycast")
+
+        if not isLegacy and not isModern then
+            return oldNamecall(self, ...)
+        end
+
+        -- Modern Raycast must be called on Workspace
+        if isModern and not (self == Workspace or (typeof(self) == "Instance" and self:IsA("Workspace"))) then
+            return oldNamecall(self, ...)
+        end
+
+        if Config.SilentAim.HitChance < 100
+           and math.random(1, 100) > Config.SilentAim.HitChance then
+            return oldNamecall(self, ...)
+        end
+
+        hookBusy = true
+        local pOk, ret = pcall(function()
+            local t = Target.acquire(
+                Config.SilentAim.FOV,
+                Config.SilentAim.TeamCheck,
+                Config.SilentAim.WallCheck,
+                Config.SilentAim.Mode,
+                "Nearest"
+            )
+            if not t then return oldNamecall(self, ...) end
+
+            local part = Util.part(t, Config.SilentAim.Mode)
+            local root = Util.root(t)
+            if not part then return oldNamecall(self, ...) end
+
+            local aimPos = Target.predict(part, root, Config.SilentAim.Prediction)
+            local args = { ... }
+
+            if isLegacy then
+                local oldRay = args[1]
+                if typeof(oldRay) == "Ray" then
+                    args[1] = Ray.new(oldRay.Origin, aimPos - oldRay.Origin)
+                elseif typeof(oldRay) == "table" and oldRay.Origin then
+                    oldRay.Direction = aimPos - oldRay.Origin
+                end
+            elseif isModern then
+                local origin, dir = args[1], args[2]
+                if typeof(origin) == "Vector3" then
+                    local nd = aimPos - origin
+                    if typeof(dir) == "Vector3" and dir.Magnitude > 0 then
+                        nd = nd.Unit * dir.Magnitude
+                    end
+                    args[2] = nd
+                end
+            end
+
+            return oldNamecall(self, unpack(args))
+        end)
+
+        hookBusy = false
+        if pOk then return ret end
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(mt, true)
+end
+
+-- ============================================================
+-- AIMBOT
+-- ============================================================
+local aimHeld = false
+UIS.InputBegan:Connect(function(i, gp)
+    if gp then return end
+    if i.UserInputType == Config.Aimbot.Key or i.KeyCode == Enum.KeyCode.ButtonR2 then
+        aimHeld = true
+    end
+end)
+UIS.InputEnded:Connect(function(i)
+    if i.UserInputType == Config.Aimbot.Key or i.KeyCode == Enum.KeyCode.ButtonR2 then
+        aimHeld = false
+    end
+end)
+
+local currentAimTarget = nil
+
+RunService.RenderStepped:Connect(function()
+    if not Config.Aimbot.Enabled then currentAimTarget = nil; return end
+
+    -- Sticky retention
+    if Config.Aimbot.StickyAim and currentAimTarget and Util.isAlive(currentAimTarget) then
+        local part = Util.part(currentAimTarget, Config.Aimbot.Mode)
+        if part and (not Config.Aimbot.WallCheck or Util.visible(part)) then
+            -- keep target
+        else
+            currentAimTarget = nil
+        end
+    else
+        currentAimTarget = nil
+    end
+
+    if not aimHeld then return end
+
+    if not currentAimTarget then
+        currentAimTarget = Target.acquire(
+            Config.Aimbot.FOV, Config.Aimbot.TeamCheck,
+            Config.Aimbot.WallCheck, Config.Aimbot.Mode, "Nearest"
+        )
+    end
+    if not currentAimTarget then return end
+
+    local part = Util.part(currentAimTarget, Config.Aimbot.Mode)
+    local root = Util.root(currentAimTarget)
+    if not part then return end
+
+    local aimPos = Target.predict(part, root, Config.Aimbot.Prediction)
+    local desired = CFrame.new(Camera.CFrame.Position, aimPos)
+    Camera.CFrame = Camera.CFrame:Lerp(desired, 1 - Config.Aimbot.Smoothness)
+end)
+
+-- ============================================================
+-- CAMERA MODULE
+-- ============================================================
+local camTarget = nil
+RunService:BindToRenderStep("LunarCam", Enum.RenderPriority.Camera.Value + 1, function(dt)
+    if not Config.Camera.Enabled then return end
+    if not camTarget or not Util.isAlive(camTarget) then
+        camTarget = Target.acquire(Config.Camera.FOV or 100000, Config.Aimbot.TeamCheck, false, "Head", "Server")
+    end
+    if not camTarget then return end
+
+    local root = Util.root(camTarget)
+    local head = Util.part(camTarget, "Head")
+    if not root or not head then return end
+
+    if Config.Camera.Mode == "Track" or Config.Camera.Mode == "Lock" then
+        local anchor = root.Position + Vector3.new(0, Config.Camera.OffsetY, Config.Camera.OffsetZ)
+        local look = CFrame.new(Camera.CFrame.Position, head.Position)
+        local smooth = Config.Camera.Mode == "Lock" and 1 or Config.Camera.Smoothness
+        Camera.CFrame = Camera.CFrame:Lerp(look, 1 - smooth)
+    end
+end)
+
+-- ============================================================
+-- FARM ENGINE
+-- ============================================================
+local Farm = {
+    target = nil,
+    state = "idle",
+    timer = 0,
+    shots = 0,
+    orbitAngle = 0,
+}
+
+local function fireWeapon()
+    -- Priority 1: VirtualInputManager (executor-provided)
+    if VirtualInputManager then
+        pcall(function()
+            VirtualInputManager:SendMouseButtonEvent(
+                Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2,
+                0, true, game, 1
+            )
+            VirtualInputManager:SendMouseButtonEvent(
+                Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2,
+                0, false, game, 1
+            )
+        end)
+        return true
+    end
+    -- Priority 2: mousemoverel + click via LP mouse
+    if mousemoverel then
+        pcall(function()
+            mousemoverel(0, 0)
+            Mouse:Click()
+        end)
+        return true
+    end
+    -- Priority 3: tool Activate
+    local char = LP.Character
+    if char then
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then
+            pcall(function() tool:Activate() end)
+            return true
+        end
+    end
+    return false
+end
+
+local function flyStep(myRoot, dest, speed, dt)
+    local delta = dest - myRoot.Position
+    local dist = delta.Magnitude
+    if dist < 0.15 then return true end
+    local step = math.min(dist, speed * dt)
+    myRoot.CFrame = CFrame.new(myRoot.Position + delta.Unit * step, dest)
+    return false
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    if not Config.Farm.Enabled then
+        Farm.target = nil
+        Farm.state = "idle"
+        return
+    end
+
+    local myChar = LP.Character
+    local myRoot = Util.root(LP)
+    if not myChar or not myRoot then return end
+    local myHum = myChar:FindFirstChildOfClass("Humanoid")
+    if myHum then myHum.PlatformStand = true end
+
+    -- Acquire or re-acquire
+    if not Farm.target or not Util.isAlive(Farm.target) then
+        Farm.target = Target.acquire(
+            0, Config.SilentAim.TeamCheck, false, Config.Farm.Mode == "Snipe" and "Head" or "Torso",
+            Config.Farm.TargetScope
+        )
+        Farm.state = "approach"
+        Farm.shots = 0
+        Farm.timer = 0
+    end
+    if not Farm.target then return end
+
+    local tRoot = Util.root(Farm.target)
+    local tHead = Util.part(Farm.target, "Head")
+    if not tRoot or not tHead then Farm.target = nil; return end
+
+    -- Range guard
+    local myDist = (tRoot.Position - myRoot.Position).Magnitude
+    if myDist > Config.Farm.MaxRange then Farm.target = nil; return end
+
+    -- Camera
+    if Config.Farm.CameraFollow then
+        local look = CFrame.new(Camera.CFrame.Position, tHead.Position)
+        Camera.CFrame = Camera.CFrame:Lerp(look, 0.3)
+    end
+
+    if Farm.state == "approach" then
+        local behind, dest
+        if Config.Farm.Mode == "Mount" then
+            behind = tRoot.CFrame.LookVector * -Config.Farm.MountDistance
+            dest = tRoot.Position + behind + Vector3.new(0, Config.Farm.MountHeight, 0)
+        elseif Config.Farm.Mode == "Orbit" then
+            Farm.orbitAngle = Farm.orbitAngle + dt * 3
+            local ox = math.cos(Farm.orbitAngle) * Config.Farm.MountDistance
+            local oz = math.sin(Farm.orbitAngle) * Config.Farm.MountDistance
+            dest = tRoot.Position + Vector3.new(ox, Config.Farm.MountHeight, oz)
+        else -- Snipe
+            dest = tRoot.Position + Vector3.new(0, Config.Farm.MountHeight + 3, 0)
+        end
+        if flyStep(myRoot, dest, Config.Farm.Speed, dt) then
+            Farm.state = "mount"
+            Farm.timer = 0
+        end
+    elseif Farm.state == "mount" then
+        -- Hold position
+        local behind = tRoot.CFrame.LookVector * -Config.Farm.MountDistance
+        local lock = CFrame.new(tRoot.Position + behind + Vector3.new(0, Config.Farm.MountHeight, 0), tRoot.Position)
+        myRoot.CFrame = lock
+        Farm.timer = Farm.timer + dt
+        if Farm.timer >= Config.Farm.KillDelay then
+            Farm.state = "attack"
+        end
+    elseif Farm.state == "attack" then
+        -- Aim camera at head with silent aim active → fire
+        local aimPos = tHead.Position + tRoot.AssemblyLinearVelocity * 0.1
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPos)
+        if fireWeapon() then
+            Farm.shots = Farm.shots + 1
+        end
+        if Farm.shots >= Config.Farm.HitsPerTarget then
+            Farm.shots = 0
+            Farm.state = "retarget"
+            Farm.target = nil
+        end
+    end
+end)
+
+-- ============================================================
+-- FLY
+-- ============================================================
+RunService.RenderStepped:Connect(function(dt)
+    if not Config.Fly.Enabled then return end
+    local char = LP.Character
+    local root = Util.root(LP)
+    if not root then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.PlatformStand = true end
+
+    local dir = Vector3.zero
+    local camCF = Camera.CFrame
+    if UIS:IsKeyDown(Enum.KeyCode.W) then dir += camCF.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= camCF.LookVector end
+    if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= camCF.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.D) then dir += camCF.RightVector end
+    if UIS:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0, Config.Fly.VerticalBoost, 0) end
+    if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0, Config.Fly.VerticalBoost, 0) end
+
+    if dir.Magnitude > 0 then
+        root.CFrame = root.CFrame + dir.Unit * Config.Fly.Speed * dt
+    end
+end)
+
+-- ============================================================
+-- ESP
+-- ============================================================
+local espCache = {}
+
+local function makeESP(p)
+    if espCache[p] then return end
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "PlayerTag"
+    bb.Size = UDim2.new(0, 120, 0, 80)
+    bb.AlwaysOnTop = true
+    bb.ResetOnSpawn = false
+    bb.StudsOffset = Vector3.new(0, 3, 0)
+
+    local box = Instance.new("Frame", bb)
+    box.BackgroundTransparency = 1
+    box.Size = UDim2.new(1, 0, 1, 0)
+    local boxStroke = Instance.new("UIStroke", box)
+    boxStroke.Thickness = 1.5
+
+    local name = Instance.new("TextLabel", bb)
+    name.BackgroundTransparency = 1
+    name.Size = UDim2.new(1, 0, 0, 14)
+    name.Position = UDim2.new(0, 0, 0, -16)
+    name.TextStrokeTransparency = 0
+    name.TextSize = 12
+    name.Font = Enum.Font.GothamBold
+
+    local dist = Instance.new("TextLabel", bb)
+    dist.BackgroundTransparency = 1
+    dist.Size = UDim2.new(1, 0, 0, 12)
+    dist.Position = UDim2.new(0, 0, 1, 2)
+    dist.TextStrokeTransparency = 0
+    dist.TextSize = 11
+    dist.Font = Enum.Font.Gotham
+
+    local hpBg = Instance.new("Frame", bb)
+    hpBg.BackgroundColor3 = Color3.new(0,0,0)
+    hpBg.BorderSizePixel = 0
+    hpBg.Size = UDim2.new(0, 3, 1, 0)
+    hpBg.Position = UDim2.new(0, -6, 0, 0)
+    local hpFill = Instance.new("Frame", hpBg)
+    hpFill.BackgroundColor3 = Color3.fromRGB(0,255,0)
+    hpFill.BorderSizePixel = 0
+    hpFill.Size = UDim2.new(1, 0, 1, 0)
+
+    local headDot = Instance.new("Frame", bb)
+    headDot.BackgroundTransparency = 0
+    headDot.Size = UDim2.new(0, 6, 0, 6)
+    headDot.AnchorPoint = Vector2.new(0.5, 0.5)
+    headDot.Position = UDim2.new(0.5, 0, 0, 0)
+    headDot.BorderSizePixel = 0
+    local hdc = Instance.new("UICorner", headDot)
+    hdc.CornerRadius = UDim.new(1, 0)
+
+    espCache[p] = {
+        bb = bb, box = box, stroke = boxStroke,
+        name = name, dist = dist,
+        hpBg = hpBg, hpFill = hpFill, headDot = headDot,
+    }
+    bb.Parent = CoreGui
+end
+
+local function removeESP(p)
+    local d = espCache[p]
+    if d then d.bb:Destroy() end
+    espCache[p] = nil
+end
+
+Players.PlayerAdded:Connect(function(p) if p ~= LP then makeESP(p) end end)
+Players.PlayerRemoving:Connect(removeESP)
+for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then makeESP(p) end end
+
+RunService.RenderStepped:Connect(function()
+    local th = T()
+    for p, d in pairs(espCache) do
+        local char = p.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not (Config.ESP.Enabled and hum and hum.Health > 0 and root) then
+            d.bb.Enabled = false
+            continue
+        end
+        local dist3 = (Camera.CFrame.Position - root.Position).Magnitude
+        if dist3 > Config.ESP.MaxDistance then
+            d.bb.Enabled = false
+            continue
+        end
+        d.bb.Adornee = root
+        d.bb.Enabled = true
+
+        local team = Config.ESP.TeamCheck and Util.team(p)
+        local col = team and th.danger or th.accent
+
+        d.stroke.Color = col
+        d.name.TextColor3 = col
+        d.dist.TextColor3 = col
+        d.headDot.BackgroundColor3 = col
+
+        d.name.Text = p.Name
+        d.name.Visible = Config.ESP.Name
+        d.box.Visible = Config.ESP.Box
+        d.stroke.Enabled = Config.ESP.Box
+
+        if Config.ESP.Distance then
+            d.dist.Text = string.format("[%d]", math.floor(dist3))
+            d.dist.Visible = true
+        else
+            d.dist.Visible = false
+        end
+
+        if Config.ESP.Health then
+            local hp = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+            d.hpBg.Visible = true
+            d.hpFill.Size = UDim2.new(1, 0, hp, 0)
+            d.hpFill.Position = UDim2.new(0, 0, 1 - hp, 0)
+            d.hpFill.BackgroundColor3 = Color3.fromRGB(255 * (1-hp), 255 * hp, 0)
+        else
+            d.hpBg.Visible = false
+        end
+
+        d.headDot.Visible = Config.ESP.HeadDot
+    end
+end)
+
+-- ============================================================
+-- MISC
+-- ============================================================
+-- Anti-AFK
+task.spawn(function()
+    while true do
+        task.wait(60)
+        if Config.Misc.AntiAFK then
+            pcall(function()
+                LP.Idled:Connect(function()
+                    local vu = game:GetService("VirtualUser")
+                    vu:CaptureController()
+                    vu:ClickButton2(Vector2.new())
+                end)
+            end)
+            pcall(function()
+                game:GetService("VirtualUser"):CaptureController()
+                game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+            end)
+        end
+    end
+end)
+
+-- Fullbright
+RunService.RenderStepped:Connect(function()
+    if Config.Misc.Fullbright then
+        game.Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+        game.Lighting.OutdoorAmbient = Color3.fromRGB(178, 178, 178)
+        game.Lighting.Brightness = 2
+        game.Lighting.ClockTime = 12
+        game.Lighting.FogEnd = 1e6
+    end
+end)
+
+-- FOV
+RunService.RenderStepped:Connect(function()
+    if Config.Misc.FOV ~= 90 then
+        Camera.FieldOfView = Config.Misc.FOV
+    end
+end)
+
+-- ============================================================
+-- UI — PREMIUM PANEL
+-- ============================================================
+local gui = Instance.new("ScreenGui")
+gui.Name = "Settings"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+secureParent(gui)
+
+-- Main frame
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 460, 0, 500)
+main.Position = UDim2.new(0.5, -230, 0.5, -250)
+main.BackgroundColor3 = T().bg
+main.BorderSizePixel = 0
+main.Active = true
+main.ClipsDescendants = true
+
+local mainCorner = Instance.new("UICorner", main)
+mainCorner.CornerRadius = UDim.new(0, 12)
+
+local mainStroke = Instance.new("UIStroke", main)
+mainStroke.Color = T().accent
+mainStroke.Thickness = 1
+mainStroke.Transparency = 0.6
+
+-- ============ HEADER ============
+local header = Instance.new("Frame", main)
+header.Size = UDim2.new(1, 0, 0, 40)
+header.BackgroundColor3 = T().panel
+header.BorderSizePixel = 0
+
+local headerCorner = Instance.new("UICorner", header)
+headerCorner.CornerRadius = UDim.new(0, 12)
+
+local logo = Instance.new("TextLabel", header)
+logo.Size = UDim2.new(0, 200, 1, 0)
+logo.Position = UDim2.new(0, 16, 0, 0)
+logo.BackgroundTransparency = 1
+logo.Text = "◆ LUNAR PREMIUM"
+logo.TextColor3 = T().accent
+logo.Font = Enum.Font.GothamBold
+logo.TextSize = 15
+logo.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Minimize
+local minBtn = Instance.new("TextButton", header)
+minBtn.Size = UDim2.new(0, 26, 0, 26)
+minBtn.Position = UDim2.new(1, -64, 0.5, -13)
+minBtn.BackgroundColor3 = T().panel
+minBtn.TextColor3 = T().text
+minBtn.Text = "—"
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 14
+minBtn.BorderSizePixel = 0
+local minC = Instance.new("UICorner", minBtn)
+minC.CornerRadius = UDim.new(0, 6)
+
+-- Destroy
+local closeBtn = Instance.new("TextButton", header)
+closeBtn.Size = UDim2.new(0, 26, 0, 26)
+closeBtn.Position = UDim2.new(1, -34, 0.5, -13)
+closeBtn.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
+closeBtn.TextColor3 = T().danger
+closeBtn.Text = "✕"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 14
+closeBtn.BorderSizePixel = 0
+local closeC = Instance.new("UICorner", closeBtn)
+closeC.CornerRadius = UDim.new(0, 6)
+
+-- Tab bar
+local tabBar = Instance.new("Frame", main)
+tabBar.Size = UDim2.new(1, -16, 0, 30)
+tabBar.Position = UDim2.new(0, 8, 0, 44)
+tabBar.BackgroundColor3 = T().panel
+tabBar.BorderSizePixel = 0
+local tabBarC = Instance.new("UICorner", tabBar)
+tabBarC.CornerRadius = UDim.new(0, 8)
+
+local tabLayout = Instance.new("UIListLayout", tabBar)
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.Padding = UDim.new(0, 4)
+tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+tabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+
+local pages = {}
+local tabs = {}
+local activeTab = "Combat"
+
+local function switchTab(name)
+    activeTab = name
+    for n, pg in pairs(pages) do
+        pg.Visible = (n == name)
+    end
+    for n, btn in pairs(tabs) do
+        btn.TextColor3 = (n == name) and T().accent or T().sub
+        btn.BackgroundColor3 = (n == name) and Color3.fromRGB(35,35,45) or T().panel
+    end
+end
+
+for _, name in ipairs({"Combat", "Farm", "Visual", "Misc", "Config"}) do
+    local btn = Instance.new("TextButton", tabBar)
+    btn.Size = UDim2.new(0, 82, 0, 24)
+    btn.BackgroundColor3 = T().panel
+    btn.TextColor3 = T().sub
+    btn.Text = name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.BorderSizePixel = 0
+    local c = Instance.new("UICorner", btn)
+    c.CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(function() switchTab(name) end)
+    tabs[name] = btn
+
+    local pg = Instance.new("ScrollingFrame", main)
+    pg.Size = UDim2.new(1, -20, 1, -100)
+    pg.Position = UDim2.new(0, 10, 0, 84)
+    pg.BackgroundTransparency = 1
+    pg.BorderSizePixel = 0
+    pg.ScrollBarThickness = 3
+    pg.CanvasSize = UDim2.new(0, 0, 0, 800)
+    pg.Visible = false
+
+    local layout = Instance.new("UIListLayout", pg)
+    layout.Padding = UDim.new(0, 6)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    pages[name] = pg
+end
+
+-- ============ WIDGET FACTORY ============
+local function section(page, text)
+    local lbl = Instance.new("TextLabel", page)
+    lbl.Size = UDim2.new(1, 0, 0, 22)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = "▸ " .. text
+    lbl.TextColor3 = T().accent
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    return lbl
+end
+
+local function toggle(page, label, getter, setter)
+    local btn = Instance.new("TextButton", page)
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = T().panel
+    btn.TextColor3 = getter() and T().accent or T().sub
+    btn.Text = (getter() and "◉  " or "○  ") .. label
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 12
+    btn.BorderSizePixel = 0
+    local c = Instance.new("UICorner", btn)
+    c.CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(function()
+        setter(not getter())
+        btn.Text = (getter() and "◉  " or "○  ") .. label
+        btn.TextColor3 = getter() and T().accent or T().sub
+    end)
+    return btn
+end
+
+local function cycle(page, label, getter, setter, options)
+    local btn = Instance.new("TextButton", page)
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.BackgroundColor3 = T().panel
+    btn.TextColor3 = T().text
+    btn.Text = "▸ " .. label .. ": " .. tostring(getter())
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 12
+    btn.BorderSizePixel = 0
+    local c = Instance.new("UICorner", btn)
+    c.CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(function()
+        local cur = getter()
+        local idx = 1
+        for i, v in ipairs(options) do if v == cur then idx = i end end
+        idx = (idx % #options) + 1
+        setter(options[idx])
+        btn.Text = "▸ " .. label .. ": " .. tostring(getter())
+    end)
+    return btn
+end
+
+local function slider(page, label, getter, setter, min, max, step)
+    local row = Instance.new("Frame", page)
+    row.Size = UDim2.new(1, 0, 0, 40)
+    row.BackgroundColor3 = T().panel
+    row.BorderSizePixel = 0
+    local rc = Instance.new("UICorner", row)
+    rc.CornerRadius = UDim.new(0, 6)
+
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(0.7, 0, 0, 20)
+    lbl.Position = UDim2.new(0, 10, 0, 2)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label .. ": " .. tostring(getter())
+    lbl.TextColor3 = T().text
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bar = Instance.new("Frame", row)
+    bar.Size = UDim2.new(0.9, 0, 0, 6)
+    bar.Position = UDim2.new(0.05, 0, 1, -12)
+    bar.BackgroundColor3 = Color3.fromRGB(40,40,50)
+    bar.BorderSizePixel = 0
+    local bc = Instance.new("UICorner", bar)
+    bc.CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame", bar)
+    fill.BackgroundColor3 = T().accent
+    fill.BorderSizePixel = 0
+    fill.Size = UDim2.new((getter() - min) / (max - min), 0, 1, 0)
+    local fc = Instance.new("UICorner", fill)
+    fc.CornerRadius = UDim.new(1, 0)
+
+    local function update(v)
+        fill.Size = UDim2.new((v - min) / (max - min), 0, 1, 0)
+        lbl.Text = label .. ": " .. tostring(v)
+        setter(v)
+    end
+
+    -- Click-to-set
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+           or input.UserInputType == Enum.UserInputType.Touch then
+            local conn
+            conn = UIS.InputChanged:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseMovement
+                   or i.UserInputType == Enum.UserInputType.Touch then
+                    local mouseX = i.Position.X
+                    local barAbs = bar.AbsolutePosition.X
+                    local barW = bar.AbsoluteSize.X
+                    local pct = math.clamp((mouseX - barAbs) / barW, 0, 1)
+                    local v = min + (max - min) * pct
+                    v = math.floor(v / step + 0.5) * step
+                    v = math.clamp(v, min, max)
+                    update(v)
+                end
+            end)
+            local endConn
+            endConn = UIS.InputEnded:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseButton1
+                   or i.UserInputType == Enum.UserInputType.Touch then
+                    if conn then conn:Disconnect() end
+                    if endConn then endConn:Disconnect() end
+                end
+            end)
+        end
+    end)
+
+    return row
+end
+
+-- ============ COMBAT TAB ============
+local combat = pages["Combat"]
+section(combat, "Silent Aim")
+toggle(combat, "Enable Silent Aim", function() return Config.SilentAim.Enabled end, function(v) Config.SilentAim.Enabled = v end)
+cycle(combat, "Target Mode", function() return Config.SilentAim.Mode end, function(v)
+    Config.SilentAim.Mode = v
+    Config.Aimbot.Mode = v
+end, {"Head", "Torso", "Random", "Nearest"})
+slider(combat, "FOV", function() return Config.SilentAim.FOV end, function(v) Config.SilentAim.FOV = v end, 20, 500, 10)
+slider(combat, "Hit Chance %", function() return Config.SilentAim.HitChance end, function(v) Config.SilentAim.HitChance = v end, 10, 100, 5)
+toggle(combat, "Wall Check", function() return Config.SilentAim.WallCheck end, function(v) Config.SilentAim.WallCheck = v end)
+toggle(combat, "Team Check", function() return Config.SilentAim.TeamCheck end, function(v) Config.SilentAim.TeamCheck = v end)
+
+section(combat, "Legit Aimbot")
+toggle(combat, "Enable Aimbot", function() return Config.Aimbot.Enabled end, function(v) Config.Aimbot.Enabled = v end)
+toggle(combat, "Sticky Aim", function() return Config.Aimbot.StickyAim end, function(v) Config.Aimbot.StickyAim = v end)
+slider(combat, "FOV", function() return Config.Aimbot.FOV end, function(v) Config.Aimbot.FOV = v end, 20, 400, 10)
+slider(combat, "Smoothness", function() return math.floor(Config.Aimbot.Smoothness * 100) end, function(v) Config.Aimbot.Smoothness = v / 100 end, 5, 95, 5)
+
+section(combat, "Camera")
+toggle(combat, "Enable Camera Lock", function() return Config.Camera.Enabled end, function(v) Config.Camera.Enabled = v end)
+cycle(combat, "Camera Mode", function() return Config.Camera.Mode end, function(v) Config.Camera.Mode = v end, {"Track", "Lock"})
+slider(combat, "Camera Smooth", function() return math.floor(Config.Camera.Smoothness * 100) end, function(v) Config.Camera.Smoothness = v / 100 end, 5, 95, 5)
+
+-- ============ FARM TAB ============
+local farm = pages["Farm"]
+section(farm, "Auto Farm")
+toggle(farm, "Enable Farm", function() return Config.Farm.Enabled end, function(v) Config.Farm.Enabled = v end)
+cycle(farm, "Farm Mode", function() return Config.Farm.Mode end, function(v) Config.Farm.Mode = v end, {"Mount", "Orbit", "Snipe"})
+cycle(farm, "Target Scope", function() return Config.Farm.TargetScope end, function(v) Config.Farm.TargetScope = v end, {"Nearest", "Server", "Random"})
+slider(farm, "Speed", function() return Config.Farm.Speed end, function(v) Config.Farm.Speed = v end, 20, 250, 10)
+slider(farm, "Mount Dist", function() return Config.Farm.MountDistance end, function(v) Config.Farm.MountDistance = v end, 1, 10, 1)
+slider(farm, "Mount Height", function() return Config.Farm.MountHeight end, function(v) Config.Farm.MountHeight = v end, 0, 10, 1)
+slider(farm, "Shots/Kill", function() return Config.Farm.HitsPerTarget end, function(v) Config.Farm.HitsPerTarget = v end, 1, 10, 1)
+slider(farm, "Max Range", function() return Config.Farm.MaxRange end, function(v) Config.Farm.MaxRange = v end, 100, 5000, 100)
+toggle(farm, "Camera Follow", function() return Config.Farm.CameraFollow end, function(v) Config.Farm.CameraFollow = v end)
+
+section(farm, "Fly")
+toggle(farm, "Enable Fly", function() return Config.Fly.Enabled end, function(v) Config.Fly.Enabled = v end)
+slider(farm, "Fly Speed", function() return Config.Fly.Speed end, function(v) Config.Fly.Speed = v end, 10, 300, 10)
+
+-- ============ VISUAL TAB ============
+local visual = pages["Visual"]
+section(visual, "ESP")
+toggle(visual, "Enable ESP", function() return Config.ESP.Enabled end, function(v) Config.ESP.Enabled = v end)
+toggle(visual, "Box", function() return Config.ESP.Box end, function(v) Config.ESP.Box = v end)
+toggle(visual, "Name", function() return Config.ESP.Name end, function(v) Config.ESP.Name = v end)
+toggle(visual, "Health", function() return Config.ESP.Health end, function(v) Config.ESP.Health = v end)
+toggle(visual, "Distance", function() return Config.ESP.Distance end, function(v) Config.ESP.Distance = v end)
+toggle(visual, "Head Dot", function() return Config.ESP.HeadDot end, function(v) Config.ESP.HeadDot = v end)
+toggle(visual, "Team Check", function() return Config.ESP.TeamCheck end, function(v) Config.ESP.TeamCheck = v end)
+slider(visual, "Max Distance", function() return Config.ESP.MaxDistance end, function(v) Config.ESP.MaxDistance = v end, 100, 5000, 100)
+
+-- ============ MISC TAB ============
+local misc = pages["Misc"]
+section(misc, "Utility")
+toggle(misc, "Anti-AFK", function() return Config.Misc.AntiAFK end, function(v) Config.Misc.AntiAFK = v end)
+toggle(misc, "Fullbright", function() return Config.Misc.Fullbright end, function(v) Config.Misc.Fullbright = v end)
+slider(misc, "FOV Override", function() return Config.Misc.FOV end, function(v) Config.Misc.FOV = v end, 60, 140, 5)
+
+-- ============ CONFIG TAB ============
+local conf = pages["Config"]
+section(conf, "Theme")
+cycle(conf, "Theme Preset", function() return Config.Theme end, function(v)
+    Config.Theme = v
+    local th = T()
+    main.BackgroundColor3 = th.bg
+    mainStroke.Color = th.accent
+    header.BackgroundColor3 = th.panel
+    logo.TextColor3 = th.accent
+    tabBar.BackgroundColor3 = th.panel
+    for _, btn in pairs(tabs) do
+        btn.BackgroundColor3 = th.panel
+        btn.TextColor3 = th.sub
+    end
+end, {"Neon", "Blood", "Void", "Gold", "Ice"})
+
+section(conf, "Session")
+local function infoBtn(text)
+    local l = Instance.new("TextLabel", conf)
+    l.Size = UDim2.new(1, 0, 0, 26)
+    l.BackgroundColor3 = T().panel
+    l.Text = text
+    l.TextColor3 = T().sub
+    l.Font = Enum.Font.Gotham
+    l.TextSize = 11
+    l.BorderSizePixel = 0
+    local c = Instance.new("UICorner", l)
+    c.CornerRadius = UDim.new(0, 6)
+end
+infoBtn("Executor: " .. (identifyexecutor and identifyexecutor() or "Unknown"))
+infoBtn("Version: 5.0 Premium")
+infoBtn("Toggle UI: RightShift")
+infoBtn("Destroy UI: X button")
+
+switchTab("Combat")
+
+-- ============ HEADER DRAG ============
+local dragging, dragStart, startPos
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+       or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = main.Position
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+                     or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                   startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+       or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- ============ MINIMIZE / DESTROY ============
+local minimized = false
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        main.Size = UDim2.new(0, 460, 0, 40)
+        tabBar.Visible = false
+        for _, pg in pairs(pages) do pg.Visible = false end
+        minBtn.Text = "+"
+    else
+        main.Size = UDim2.new(0, 460, 0, 500)
+        tabBar.Visible = true
+        switchTab(activeTab)
+        minBtn.Text = "—"
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    gui:Destroy()
+    for _, d in pairs(espCache) do d.bb:Destroy() end
+    espCache = {}
+    Config.SilentAim.Enabled = false
+    Config.Aimbot.Enabled = false
+    Config.Farm.Enabled = false
+    Config.Camera.Enabled = false
+    Config.Fly.Enabled = false
+    Config.ESP.Enabled = false
+    print("[Lunar] Premium UI destroyed. Reload script to restart.")
+end)
+
+-- ============ KEYBIND / MOBILE ============
+UIS.InputBegan:Connect(function(i, gp)
+    if gp then return end
+    if i.KeyCode == Enum.KeyCode.RightShift then
+        main.Visible = not main.Visible
+    end
+end)
+
+local openBtn = Instance.new("TextButton", gui)
+openBtn.Size = UDim2.new(0, 52, 0, 52)
+openBtn.Position = UDim2.new(0, 20, 0.5, 240)
+openBtn.BackgroundColor3 = T().bg
+openBtn.TextColor3 = T().accent
+openBtn.Text = "◆"
+openBtn.Font = Enum.Font.GothamBold
+openBtn.TextSize = 24
+openBtn.BorderSizePixel = 0
+openBtn.Visible = UIS.TouchEnabled
+openBtn.MouseButton1Click:Connect(function()
+    main.Visible = not main.Visible
+end)
+local obc = Instance.new("UICorner", openBtn)
+obc.CornerRadius = UDim.new(1, 0)
+local obs = Instance.new("UIStroke", openBtn)
+obs.Color = T().accent
+obs.Thickness = 1
+obs.Transparency = 0.5
+
+-- ============ FOV CIRCLE ============
+local fovGui = Instance.new("ScreenGui")
+fovGui.Name = "PlayerList"
+fovGui.ResetOnSpawn = false
+fovGui.IgnoreGuiInset = true
+secureParent(fovGui)
+
+local fovCircle = Instance.new("Frame", fovGui)
+fovCircle.BackgroundTransparency = 1
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.Position = UDim2.new(0.5, 0, 0.5, 0)
+fovCircle.Visible = false
+local fovStroke = Instance.new("UIStroke", fovCircle)
+fovStroke.Thickness = 1
+fovStroke.Color = T().accent
+fovStroke.Transparency = 0.4
+local fovCorner = Instance.new("UICorner", fovCircle)
+fovCorner.CornerRadius = UDim.new(1, 0)
+
+RunService.RenderStepped:Connect(function()
+    local active = nil
+    if Config.SilentAim.Enabled then active = Config.SilentAim.FOV end
+    if Config.Aimbot.Enabled then active = math.max(active or 0, Config.Aimbot.FOV) end
+    if active and active > 0 then
+        fovCircle.Visible = true
+        fovCircle.Size = UDim2.new(0, active * 2, 0, active * 2)
+        fovStroke.Color = T().accent
+    else
+        fovCircle.Visible = false
+    end
+end)
+
+print("[Lunar] Premium v5 loaded.")
+print("[Lunar] Executor:", identifyexecutor and identifyexecutor() or "Unknown")
+print("[Lunar] RightShift toggles UI. X destroys.")
