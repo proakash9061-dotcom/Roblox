@@ -1,0 +1,2575 @@
+--[[================================================================
+    EPIX BACKFIRE v1
+    credit to free bottom
+    Forge Engine // VEER
+================================================================]]
+
+local EPIX = {}
+_G.EPIX = EPIX
+EPIX.Chunks = {}
+EPIX.Order  = {}
+EPIX.Meta = {
+	Name    = "Epix Backfire",
+	Version = "v1",
+	Credit  = "free bottom",
+	Author  = "VEER",
+	Build   = "499-tier",
+}
+
+function EPIX.register(n, label, fn)
+	EPIX.Chunks[n] = { fn = fn, label = label }
+	table.insert(EPIX.Order, n)
+	print(("[EPIX] chunk %d loaded -> %s"):format(n, label))
+end
+
+function EPIX.run()
+	table.sort(EPIX.Order)
+	local missing = {}
+	for i = 1, EPIX.Order[#EPIX.Order] do
+		if not EPIX.Chunks[i] then table.insert(missing, i) end
+	end
+	if #missing > 0 then
+		warn("[EPIX] MISSING CHUNKS: " .. table.concat(missing, ", "))
+		return
+	end
+	for _, n in ipairs(EPIX.Order) do
+		local c = EPIX.Chunks[n]
+		local ok, err = pcall(c.fn)
+		if not ok then
+			warn(("[EPIX] chunk %d (%s) ERROR: %s"):format(n, c.label, tostring(err)))
+		end
+	end
+	print(("[EPIX] %s %s online  ·  credit: %s")
+		:format(EPIX.Meta.Name, EPIX.Meta.Version, EPIX.Meta.Credit))
+end
+
+print("[EPIX] loader ready")
+
+EPIX.register(1, "config", function()
+	local CONFIG = {
+		Keybind      = Enum.KeyCode.RightShift,
+		KeybindAlt   = Enum.KeyCode.Insert,
+
+		Aimbot = {
+			Enabled      = false,
+			Key          = Enum.KeyCode.E,
+			TeamCheck    = true,
+			WallCheck    = true,
+			Smoothing    = 0.18,
+			FOV          = 120,
+			MaxDist      = 500,
+			HitPart      = "Head",       -- "Head" | "Torso"
+			AutoFire     = false,
+			AutoFireMode = "Head",       -- "Head" | "HeadTorso"
+			AutoFireRate = 0.08,
+			CamTrack     = false,
+			CamSmooth    = 0.22,
+		},
+
+		Silent = {
+			Enabled   = false,
+			Key       = Enum.KeyCode.Q,
+			HitPart   = "Head",
+			TeamCheck = true,
+			WallCheck = true,
+			FOV       = 150,
+			MaxDist   = 600,
+			PredAmt   = 0.16,   -- lead projection
+			AlwaysOn  = false,
+		},
+
+		ESP = {
+			Enabled     = false,
+			Box         = true,
+			BoxStyle    = "Corner",      -- "Full" | "Corner"
+			Name        = true,
+			Distance    = true,
+			HealthBar   = true,
+			Outline     = true,
+			Skeleton    = true,
+			Chams       = false,
+			TeamCheck   = true,
+			MaxDist     = 1000,
+			TextSize    = 13,
+			BoxColor    = Color3.fromRGB(180, 130, 255),
+			OutlineColor= Color3.fromRGB(10, 10, 14),
+			FilledColor = Color3.fromRGB(180, 130, 255),
+			FilledAlpha = 0.25,
+		},
+
+		Autofarm = {
+			Enabled    = false,
+			HopDelay   = 0.35,
+			KillDelay  = 0.5,
+			HitPart    = "Head",
+			Range      = 300,
+			TeamCheck  = true,
+			OnlyPlayers= true,
+			MaxCycles  = 0,       -- 0 = infinite
+		},
+
+		BunnyHop = {
+			Enabled = false,
+			Power   = 55,
+			AutoHold= true,
+		},
+
+		Speed = {
+			Enabled = false,
+			Value   = 32,
+			Bypass  = true,
+		},
+
+		ClientRGB = {
+			Enabled  = false,
+			Speed    = 2.0,
+			Sat      = 0.85,
+			Val      = 1.0,
+			Targets  = "Mine",   -- "Mine" | "All"
+			ApplyWeapons = true,
+			ApplyChar    = true,
+		},
+
+		Potato = {
+			Enabled        = false,
+			RemoveGrass    = true,
+			RemoveTrees    = true,
+			RemoveDecals   = true,
+			RemoveParticles= true,
+			RemoveBillboards= true,
+			ForceLOD       = true,
+			SkipMaterials  = true,
+		},
+
+		Culler = {
+			Enabled = false,
+			MaxDist = 400,
+			Targets = "Building",   -- "Building" | "All" | "Props"
+			CheckInterval = 1.5,
+		},
+
+		Optimize = {
+			FPSCap       = 240,
+			ShowFPS      = true,
+			ShowEntities = true,
+			LowMem       = false,
+		},
+
+		Visuals = {
+			Fullbright   = false,
+			NoFog        = false,
+			Ambient      = Color3.fromRGB(140, 140, 145),
+			OutdoorAmb   = Color3.fromRGB(150, 150, 155),
+			ClockTime    = 14,
+			FOVOverride  = false,
+			FOV          = 90,
+		},
+
+		Theme = {
+			Bg        = Color3.fromRGB(14, 12, 20),
+			Panel     = Color3.fromRGB(20, 16, 30),
+			Card      = Color3.fromRGB(28, 22, 44),
+			CardHover = Color3.fromRGB(40, 30, 62),
+			Accent    = Color3.fromRGB(168, 100, 255),
+			Accent2   = Color3.fromRGB(255, 90, 180),
+			Accent3   = Color3.fromRGB(90, 60, 200),
+			Text      = Color3.fromRGB(238, 234, 250),
+			TextDim   = Color3.fromRGB(150, 142, 178),
+			Success   = Color3.fromRGB(120, 230, 160),
+			Danger    = Color3.fromRGB(255, 90, 120),
+			Warning   = Color3.fromRGB(255, 190, 90),
+			Off       = Color3.fromRGB(58, 50, 84),
+			Stroke    = Color3.fromRGB(160, 120, 255),
+			Radius    = 12,
+			Rounding  = "high",
+			Opacity   = 1.0,
+		},
+	}
+
+	EPIX.CONFIG = CONFIG
+	EPIX.T = CONFIG.Theme
+
+	-- theme helpers
+	local Theme = {}
+
+	function Theme.applyColor(key, color)
+		if EPIX.T[key] ~= nil then EPIX.T[key] = color end
+	end
+
+	function Theme.rgb(hz)
+		local t = tick() * (hz or 1)
+		return Color3.fromHSV((t % 1), EPIX.CONFIG.ClientRGB.Sat, EPIX.CONFIG.ClientRGB.Val)
+	end
+
+	function Theme.lerp(a, b, t)
+		return a:Lerp(b, math.clamp(t, 0, 1))
+	end
+
+	function Theme.alpha(c, a)
+		return Color3.new(c.R, c.G, c.B)  -- Alpha handled by Transparency
+	end
+
+	EPIX.Theme = Theme
+	print("[EPIX] config + theme ready")
+end)
+
+EPIX.register(2, "services", function()
+	local Players           = game:GetService("Players")
+	local RunService        = game:GetService("RunService")
+	local UserInputService  = game:GetService("UserInputService")
+	local TweenService      = game:GetService("TweenService")
+	local CoreGui           = game:GetService("CoreGui")
+	local Lighting          = game:GetService("Lighting")
+	local Workspace         = game:GetService("Workspace")
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local HttpService       = game:GetService("HttpService")
+	local StarterGui        = game:GetService("StarterGui")
+	local Stats             = game:GetService("Stats")
+	local Debris            = game:GetService("Debris")
+
+	local LP = Players.LocalPlayer
+	assert(LP, "[EPIX] no local player")
+
+	local Services = {
+		Players = Players,
+		RunService = RunService,
+		UserInputService = UserInputService,
+		TweenService = TweenService,
+		CoreGui = CoreGui,
+		Lighting = Lighting,
+		Workspace = Workspace,
+		ReplicatedStorage = ReplicatedStorage,
+		HttpService = HttpService,
+		StarterGui = StarterGui,
+		Stats = Stats,
+		Debris = Debris,
+	}
+
+	-- GUI parent resolution
+	local PARENT
+	do
+		if type(gethui) == "function" then
+			local ok, h = pcall(gethui)
+			if ok and typeof(h) == "Instance" then PARENT = h end
+		end
+		if not PARENT then
+			local ok, cg = pcall(function() return CoreGui end)
+			if ok and typeof(cg) == "Instance" then PARENT = cg end
+		end
+		if not PARENT then PARENT = LP:WaitForChild("PlayerGui") end
+	end
+
+	EPIX.S              = Services
+	EPIX.LP             = LP
+	EPIX.PARENT         = PARENT
+	EPIX.Camera         = Workspace.CurrentCamera
+
+	-- shared state container
+	EPIX.State = {
+		ESP_Registry    = {},   -- [player] = {container=..., parts={}}
+		ESP_Folder      = nil,
+		Aimbot_Target   = nil,
+		Silent_Target   = nil,
+		Autofarm_Active = false,
+		Autofarm_Cycles = 0,
+		LastAutofarmHop = 0,
+		RGB_Conn        = nil,
+		Potato_Saved    = {},
+		Culler_Conn     = nil,
+		Optimize_Conn   = nil,
+		Connections     = {},
+		GuiRefs         = {},
+	}
+
+	function EPIX.track(conn)
+		table.insert(EPIX.State.Connections, conn)
+		return conn
+	end
+
+	function EPIX.untrackAll()
+		for _, c in ipairs(EPIX.State.Connections) do
+			pcall(function() c:Disconnect() end)
+		end
+		EPIX.State.Connections = {}
+	end
+
+	print("[EPIX] services + state ready")
+end)
+
+EPIX.register(3, "entities", function()
+	local Players    = EPIX.S.Players
+	local Workspace  = EPIX.S.Workspace
+	local LP         = EPIX.LP
+	local Camera     = EPIX.Camera
+
+	local Entity = {}
+
+	function Entity.getChar(p)
+		return p and p.Character
+	end
+
+	function Entity.getHum(p)
+		local c = Entity.getChar(p)
+		return c and c:FindFirstChildOfClass("Humanoid")
+	end
+
+	function Entity.getRoot(p)
+		local c = Entity.getChar(p)
+		return c and c:FindFirstChild("HumanoidRootPart")
+	end
+
+	function Entity.getHead(p)
+		local c = Entity.getChar(p)
+		return c and c:FindFirstChild("Head")
+	end
+
+	function Entity.getTorso(p)
+		local c = Entity.getChar(p)
+		return c and (c:FindFirstChild("UpperTorso") or c:FindFirstChild("Torso"))
+	end
+
+	function Entity.isAlive(p)
+		local hum = Entity.getHum(p)
+		return hum and hum.Health > 0
+	end
+
+	function Entity.isFriendly(p, teamCheck)
+		if not teamCheck then return false end
+		return p.Team ~= nil and p.Team == LP.Team
+	end
+
+	function Entity.distTo(p)
+		local root = Entity.getRoot(LP)
+		local hr   = Entity.getRoot(p)
+		if not root or not hr then return math.huge end
+		return (root.Position - hr.Position).Magnitude
+	end
+
+	function Entity.isVisible(p, targetPart)
+		if not targetPart then return false end
+		local cam = Workspace.CurrentCamera
+		if not cam then return false end
+		local origin = cam.CFrame.Position
+		local dir = (targetPart.Position - origin)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { LP.Character }
+		local hit = Workspace:Raycast(origin, dir, params)
+		return hit == nil or hit.Instance:IsDescendantOf(p.Character)
+	end
+
+	function Entity.getBones(p)
+		local char = Entity.getChar(p)
+		if not char then return nil end
+		local head = char:FindFirstChild("Head")
+		local hrp  = char:FindFirstChild("HumanoidRootPart")
+		if not head or not hrp then return nil end
+		local hum = Entity.getHum(p)
+		local rig = hum and hum.RigType
+		local bones = {
+			Head = head,
+			Root = hrp,
+		}
+		if rig == Enum.HumanoidRigType.R15 then
+			bones.UpperTorso = char:FindFirstChild("UpperTorso")
+			bones.LowerTorso = char:FindFirstChild("LowerTorso")
+			bones.LeftUpperArm = char:FindFirstChild("LeftUpperArm")
+			bones.LeftLowerArm = char:FindFirstChild("LeftLowerArm")
+			bones.LeftHand = char:FindFirstChild("LeftHand")
+			bones.RightUpperArm = char:FindFirstChild("RightUpperArm")
+			bones.RightLowerArm = char:FindFirstChild("RightLowerArm")
+			bones.RightHand = char:FindFirstChild("RightHand")
+			bones.LeftUpperLeg = char:FindFirstChild("LeftUpperLeg")
+			bones.LeftLowerLeg = char:FindFirstChild("LeftLowerLeg")
+			bones.LeftFoot = char:FindFirstChild("LeftFoot")
+			bones.RightUpperLeg = char:FindFirstChild("RightUpperLeg")
+			bones.RightLowerLeg = char:FindFirstChild("RightLowerLeg")
+			bones.RightFoot = char:FindFirstChild("RightFoot")
+		else
+			bones.Torso = char:FindFirstChild("Torso")
+			bones.LeftArm = char:FindFirstChild("Left Arm")
+			bones.RightArm = char:FindFirstChild("Right Arm")
+			bones.LeftLeg = char:FindFirstChild("Left Leg")
+			bones.RightLeg = char:FindFirstChild("Right Leg")
+		end
+		return bones
+	end
+
+	function Entity.getPlayersList()
+		local list = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= LP and Entity.isAlive(p) then
+				table.insert(list, p)
+			end
+		end
+		return list
+	end
+
+	function Entity.worldToScreen(worldPos)
+		local cam = Workspace.CurrentCamera
+		if not cam then return nil end
+		local sp, onScreen = cam:WorldToViewportPoint(worldPos)
+		if not onScreen or sp.Z <= 0 then return nil end
+		return Vector2.new(sp.X, sp.Y), sp.Z
+	end
+
+	function Entity.getScreenBounds(p)
+		local head = Entity.getHead(p)
+		local root = Entity.getRoot(p)
+		if not head or not root then return nil end
+		local headPos = head.Position + Vector3.new(0, 0.6, 0)
+		local feetPos = root.Position - Vector3.new(0, 3, 0)
+		local sHead = Entity.worldToScreen(headPos)
+		local sFeet = Entity.worldToScreen(feetPos)
+		if not sHead or not sFeet then return nil end
+		local top    = sHead
+		local bottom = sFeet
+		local height = math.abs(bottom.Y - top.Y)
+		local width  = height * 0.55
+		local left   = top.X - width / 2
+		local right  = top.X + width / 2
+		return {
+			topLeft = Vector2.new(left, top.Y),
+			bottomRight = Vector2.new(right, bottom.Y),
+			center = Vector2.new((left + right) / 2, (top.Y + bottom.Y) / 2),
+			width = width,
+			height = height,
+		}
+	end
+
+	EPIX.Entity = Entity
+	print("[EPIX] entity helpers ready")
+end)
+
+EPIX.register(4, "esp", function()
+	local RunService    = EPIX.S.RunService
+	local Workspace     = EPIX.S.Workspace
+	local TweenService  = EPIX.S.TweenService
+	local Players       = EPIX.S.Players
+
+	local Entity        = EPIX.Entity
+	local LP            = EPIX.LP
+	local CONFIG        = EPIX.CONFIG
+	local T             = EPIX.T
+
+	local ESP = {}
+
+	-- ESP folder in CoreGui (or parent)
+	local function ensureFolder()
+		if EPIX.State.ESP_Folder and EPIX.State.ESP_Folder.Parent then
+			return EPIX.State.ESP_Folder
+		end
+		local f = Instance.new("Folder")
+		f.Name = "EpixESP"
+		f.Parent = EPIX.PARENT
+		EPIX.State.ESP_Folder = f
+		return f
+	end
+
+	local function makeDraw(class, props, parent)
+		local o = Instance.new(class)
+		for k, v in next, props do o[k] = v end
+		o.Parent = parent
+		return o
+	end
+
+	-- one player's esp bundle
+	local function createBundle(p)
+		local f = ensureFolder()
+		local container = makeDraw("Frame", {
+			Name = p.Name .. "_ESP",
+			BackgroundTransparency = 1,
+			Size = UDim2.new(0, 0, 0, 0),
+			Position = UDim2.new(0, 0, 0, 0),
+			Visible = false,
+			ZIndex = 2,
+			ClipsDescendants = false,
+		}, f)
+
+		local outline = makeDraw("Frame", {
+			Name = "Outline",
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 3,
+		}, container)
+		for _, side in ipairs({"Top","Bottom","Left","Right"}) do
+			makeDraw("Frame", {
+				Name = side,
+				BackgroundColor3 = CONFIG.ESP.OutlineColor,
+				BorderSizePixel = 0,
+				ZIndex = 3,
+			}, outline)
+		end
+
+		local box = makeDraw("Frame", {
+			Name = "Box",
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 4,
+		}, container)
+		for _, side in ipairs({"Top","Bottom","Left","Right"}) do
+			makeDraw("Frame", {
+				Name = side,
+				BackgroundColor3 = CONFIG.ESP.BoxColor,
+				BorderSizePixel = 0,
+				ZIndex = 4,
+			}, box)
+		end
+
+		local fill = makeDraw("Frame", {
+			Name = "Fill",
+			BackgroundColor3 = CONFIG.ESP.FilledColor,
+			BackgroundTransparency = 1 - CONFIG.ESP.FilledAlpha,
+			BorderSizePixel = 0,
+			ZIndex = 3,
+		}, container)
+
+		local nameLbl = makeDraw("TextLabel", {
+			Name = "Name",
+			BackgroundTransparency = 1,
+			Text = p.Name,
+			TextColor3 = CONFIG.ESP.BoxColor,
+			Font = Enum.Font.GothamBold,
+			TextSize = CONFIG.ESP.TextSize,
+			TextStrokeTransparency = 0.5,
+			TextStrokeColor3 = Color3.fromRGB(0,0,0),
+			ZIndex = 5,
+		}, container)
+
+		local distLbl = makeDraw("TextLabel", {
+			Name = "Distance",
+			BackgroundTransparency = 1,
+			Text = "0m",
+			TextColor3 = CONFIG.ESP.BoxColor,
+			Font = Enum.Font.GothamBold,
+			TextSize = CONFIG.ESP.TextSize - 2,
+			TextStrokeTransparency = 0.5,
+			TextStrokeColor3 = Color3.fromRGB(0,0,0),
+			ZIndex = 5,
+		}, container)
+
+		local hpBack = makeDraw("Frame", {
+			Name = "HPBack",
+			BackgroundColor3 = Color3.fromRGB(20, 20, 24),
+			BorderSizePixel = 0,
+			ZIndex = 4,
+		}, container)
+
+		local hpFill = makeDraw("Frame", {
+			Name = "HPFill",
+			BackgroundColor3 = Color3.fromRGB(80, 220, 120),
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 1, 0),
+			ZIndex = 5,
+		}, container)
+
+		local skeleton = makeDraw("Frame", {
+			Name = "Skeleton",
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 6,
+		}, container)
+
+		return {
+			container = container,
+			outline = outline,
+			box = box,
+			fill = fill,
+			name = nameLbl,
+			dist = distLbl,
+			hpBack = hpBack,
+			hpFill = hpFill,
+			skeleton = skeleton,
+			lines = {},
+		}
+	end
+
+	local function ensureBundle(p)
+		local b = EPIX.State.ESP_Registry[p]
+		if b and b.container and b.container.Parent then return b end
+		b = createBundle(p)
+		EPIX.State.ESP_Registry[p] = b
+		return b
+	end
+
+	local function clearBundle(p)
+		local b = EPIX.State.ESP_Registry[p]
+		if b and b.container then
+			pcall(function() b.container:Destroy() end)
+		end
+		EPIX.State.ESP_Registry[p] = nil
+	end
+
+	-- outline side sizing
+	local function sizeOutline(outline, w, h, thickness)
+		local t = thickness or 1
+		local sides = outline:GetChildren()
+		for _, s in ipairs(sides) do
+			if s:IsA("Frame") then
+				if s.Name == "Top" or s.Name == "Bottom" then
+					s.Size = UDim2.new(1, 0, 0, t)
+					s.Position = (s.Name == "Top") and UDim2.new(0, 0, 0, 0) or UDim2.new(0, 0, 1, -t)
+				elseif s.Name == "Left" or s.Name == "Right" then
+					s.Size = UDim2.new(0, t, 1, 0)
+					s.Position = (s.Name == "Left") and UDim2.new(0, 0, 0, 0) or UDim2.new(1, -t, 0, 0)
+				end
+			end
+		end
+	end
+
+	-- corner-style box sizing
+	local function sizeCorners(box, w, h, thickness)
+		local t = thickness or 1
+		local cl = math.max(4, math.floor(math.min(w, h) * 0.25))
+		for _, s in ipairs(box:GetChildren()) do
+			if s:IsA("Frame") then
+				if s.Name == "Top" then
+					s.Size = UDim2.new(0, cl, 0, t)
+					s.Position = UDim2.new(0, 0, 0, 0)
+				elseif s.Name == "Bottom" then
+					s.Size = UDim2.new(0, cl, 0, t)
+					s.Position = UDim2.new(1, -cl, 1, -t)
+				elseif s.Name == "Left" then
+					s.Size = UDim2.new(0, t, 0, cl)
+					s.Position = UDim2.new(0, 0, 1, -cl)
+				elseif s.Name == "Right" then
+					s.Size = UDim2.new(0, t, 0, cl)
+					s.Position = UDim2.new(1, -t, 0, 0)
+				end
+			end
+		end
+	end
+
+	local function sizeFullBox(box, w, h, thickness)
+		local t = thickness or 1
+		for _, s in ipairs(box:GetChildren()) do
+			if s:IsA("Frame") then
+				if s.Name == "Top" or s.Name == "Bottom" then
+					s.Size = UDim2.new(1, 0, 0, t)
+					s.Position = (s.Name == "Top") and UDim2.new(0, 0, 0, 0) or UDim2.new(0, 0, 1, -t)
+				elseif s.Name == "Left" or s.Name == "Right" then
+					s.Size = UDim2.new(0, t, 1, 0)
+					s.Position = (s.Name == "Left") and UDim2.new(0, 0, 0, 0) or UDim2.new(1, -t, 0, 0)
+				end
+			end
+		end
+	end
+
+	-- skeleton drawing
+	local BONE_EDGES = {
+		-- head-neck-torso chain
+		{"Head", "UpperTorso"},
+		{"UpperTorso", "LowerTorso"},
+		-- arms
+		{"UpperTorso", "LeftUpperArm"},
+		{"LeftUpperArm", "LeftLowerArm"},
+		{"LeftLowerArm", "LeftHand"},
+		{"UpperTorso", "RightUpperArm"},
+		{"RightUpperArm", "RightLowerArm"},
+		{"RightLowerArm", "RightHand"},
+		-- legs
+		{"LowerTorso", "LeftUpperLeg"},
+		{"LeftUpperLeg", "LeftLowerLeg"},
+		{"LeftLowerLeg", "LeftFoot"},
+		{"LowerTorso", "RightUpperLeg"},
+		{"RightUpperLeg", "RightLowerLeg"},
+		{"RightLowerLeg", "RightFoot"},
+	}
+
+	local function drawSkeleton(skelFrame, bones)
+		if not bones then return end
+		local used = 0
+
+		for _, edge in ipairs(BONE_EDGES) do
+			local a = bones[edge[1]]
+			local b = bones[edge[2]]
+			if a and b then
+				local aPos = Entity.worldToScreen(a.Position)
+				local bPos = Entity.worldToScreen(b.Position)
+				if aPos and bPos then
+					used = used + 1
+					local line = skelFrame:FindFirstChild("L" .. used)
+					if not line then
+						line = Instance.new("Frame")
+						line.Name = "L" .. used
+						line.BackgroundColor3 = CONFIG.ESP.BoxColor
+						line.BorderSizePixel = 0
+						line.ZIndex = 6
+						line.Parent = skelFrame
+					end
+					local dx = bPos.X - aPos.X
+					local dy = bPos.Y - aPos.Y
+					local len = math.sqrt(dx * dx + dy * dy)
+					local angle = math.deg(math.atan2(dy, dx))
+					line.Visible = true
+					line.Size = UDim2.new(0, len, 0, 1)
+					line.Position = UDim2.new(0, aPos.X, 0, aPos.Y)
+					line.Rotation = angle
+					line.AnchorPoint = Vector2.new(0, 0.5)
+				end
+			end
+		end
+
+		-- hide unused lines
+		for _, c in ipairs(skelFrame:GetChildren()) do
+			if c:IsA("Frame") then
+				local idx = tonumber(c.Name:match("L(%d+)"))
+				if idx and idx > used then c.Visible = false end
+			end
+		end
+	end
+
+	-- render loop
+	local function renderOne(p)
+		local b = ensureBundle(p)
+		local bounds = Entity.getScreenBounds(p)
+		if not bounds then
+			b.container.Visible = false
+			return
+		end
+
+		local hum = Entity.getHum(p)
+		if not hum then b.container.Visible = false return end
+
+		b.container.Visible = true
+		b.container.Position = UDim2.fromOffset(bounds.topLeft.X, bounds.topLeft.Y)
+		b.container.Size = UDim2.fromOffset(bounds.width, bounds.height)
+
+		-- outline
+		b.outline.Visible = CONFIG.ESP.Outline
+		if CONFIG.ESP.Outline then
+			b.outline.Size = UDim2.new(1, 4, 1, 4)
+			b.outline.Position = UDim2.new(0, -2, 0, -2)
+			sizeOutline(b.outline, bounds.width + 4, bounds.height + 4, 1)
+		end
+
+		-- box
+		b.box.Visible = CONFIG.ESP.Box
+		if CONFIG.ESP.Box then
+			b.box.Size = UDim2.new(1, 0, 1, 0)
+			b.box.Position = UDim2.new(0, 0, 0, 0)
+			if CONFIG.ESP.BoxStyle == "Corner" then
+				sizeCorners(b.box, bounds.width, bounds.height, 2)
+			else
+				sizeFullBox(b.box, bounds.width, bounds.height, 1.5)
+			end
+		end
+
+		-- fill
+		b.fill.Visible = CONFIG.ESP.Chams
+		b.fill.Size = UDim2.new(1, 0, 1, 0)
+
+		-- name
+		b.name.Visible = CONFIG.ESP.Name
+		if CONFIG.ESP.Name then
+			b.name.Text = p.Name
+			b.name.Size = UDim2.new(1, 0, 0, 14)
+			b.name.Position = UDim2.new(0, 0, 0, -16)
+		end
+
+		-- distance
+		b.dist.Visible = CONFIG.ESP.Distance
+		if CONFIG.ESP.Distance then
+			local d = Entity.distTo(p)
+			b.dist.Text = string.format("%dm", math.floor(d))
+			b.dist.Size = UDim2.new(1, 0, 0, 12)
+			b.dist.Position = UDim2.new(0, 0, 1, 2)
+		end
+
+		-- health
+		b.hpBack.Visible = CONFIG.ESP.HealthBar
+		b.hpFill.Visible = CONFIG.ESP.HealthBar
+		if CONFIG.ESP.HealthBar then
+			local hpRatio = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+			b.hpBack.Size = UDim2.new(0, 3, 1, 0)
+			b.hpBack.Position = UDim2.new(0, -6, 0, 0)
+			b.hpFill.Size = UDim2.new(1, 0, hpRatio, 0)
+			b.hpFill.Position = UDim2.new(0, 0, 1 - hpRatio, 0)
+			local r = 1 - hpRatio
+			b.hpFill.BackgroundColor3 = Color3.new(
+				math.clamp(r * 2, 0, 1),
+				math.clamp((1 - r) * 2, 0, 1),
+				0.2
+			)
+		end
+
+		-- skeleton
+		b.skeleton.Visible = CONFIG.ESP.Skeleton
+		if CONFIG.ESP.Skeleton then
+			b.skeleton.Size = UDim2.new(1, 0, 1, 0)
+			b.skeleton.Position = UDim2.new(0, 0, 0, 0)
+			drawSkeleton(b.skeleton, Entity.getBones(p))
+		end
+	end
+
+	function ESP.start()
+		if EPIX.State.ESP_Conn then
+			EPIX.State.ESP_Conn:Disconnect()
+		end
+		EPIX.State.ESP_Conn = RunService.RenderStepped:Connect(function()
+			if not CONFIG.ESP.Enabled then
+				for _, b in next, EPIX.State.ESP_Registry do
+					if b.container then b.container.Visible = false end
+				end
+				return
+			end
+			for _, p in ipairs(Players:GetPlayers()) do
+				if p ~= LP and Entity.isAlive(p)
+				and not Entity.isFriendly(p, CONFIG.ESP.TeamCheck)
+				and Entity.distTo(p) <= CONFIG.ESP.MaxDist then
+					pcall(renderOne, p)
+				else
+					local b = EPIX.State.ESP_Registry[p]
+					if b and b.container then b.container.Visible = false end
+				end
+			end
+		end)
+	end
+
+	function ESP.stop()
+		if EPIX.State.ESP_Conn then
+			EPIX.State.ESP_Conn:Disconnect()
+			EPIX.State.ESP_Conn = nil
+		end
+		for p, b in next, EPIX.State.ESP_Registry do
+			if b.container then b.container.Visible = false end
+		end
+	end
+
+	function ESP.refreshStyle()
+		for _, b in next, EPIX.State.ESP_Registry do
+			for _, s in ipairs(b.box:GetChildren()) do
+				if s:IsA("Frame") then s.BackgroundColor3 = CONFIG.ESP.BoxColor end
+			end
+			for _, s in ipairs(b.outline:GetChildren()) do
+				if s:IsA("Frame") then s.BackgroundColor3 = CONFIG.ESP.OutlineColor end
+			end
+			b.name.TextColor3 = CONFIG.ESP.BoxColor
+			b.dist.TextColor3 = CONFIG.ESP.BoxColor
+			b.fill.BackgroundColor3 = CONFIG.ESP.FilledColor
+			b.fill.BackgroundTransparency = 1 - CONFIG.ESP.FilledAlpha
+			b.name.TextSize = CONFIG.ESP.TextSize
+			b.dist.TextSize = CONFIG.ESP.TextSize - 2
+		end
+	end
+
+	function ESP.clearAll()
+		for p, _ in next, EPIX.State.ESP_Registry do
+			clearBundle(p)
+		end
+	end
+
+	EPIX.ESP = ESP
+	print("[EPIX] ESP engine ready")
+end)
+
+EPIX.register(5, "aimbot", function()
+	local RunService = EPIX.S.RunService
+	local Workspace  = EPIX.S.Workspace
+	local Players    = EPIX.S.Players
+	local UIS        = EPIX.S.UserInputService
+
+	local Entity     = EPIX.Entity
+	local LP         = EPIX.LP
+	local CONFIG     = EPIX.CONFIG
+	local T          = EPIX.T
+
+	local Aimbot = {}
+
+	-- FOV ring drawn on screen
+	local FOVRing
+	local function ensureFOVRing()
+		if FOVRing and FOVRing.Parent then return FOVRing end
+		local ring = Instance.new("Frame")
+		ring.Name = "EpixFOVRing"
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.Position = UDim2.new(0.5, 0, 0.5, 0)
+		ring.BackgroundTransparency = 1
+		ring.BorderSizePixel = 0
+		ring.ZIndex = 50
+		ring.Visible = false
+
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = ring
+
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = CONFIG.Theme.Accent
+		stroke.Thickness = 1.4
+		stroke.Transparency = 0.35
+		stroke.Parent = ring
+
+		ring.Parent = EPIX.PARENT
+		FOVRing = ring
+		return ring
+	end
+
+	local function updateFOVRing()
+		local ring = ensureFOVRing()
+		if not CONFIG.Aimbot.Enabled and not CONFIG.Silent.Enabled then
+			ring.Visible = false
+			return
+		end
+		ring.Visible = true
+		local fov = math.max(CONFIG.Aimbot.FOV, CONFIG.Silent.FOV)
+		local size = fov * 2
+		ring.Size = UDim2.fromOffset(size, size)
+		local stroke = ring:FindFirstChildOfClass("UIStroke")
+		if stroke then
+			stroke.Color = CONFIG.Silent.Enabled and Color3.fromRGB(255, 90, 180) or CONFIG.Theme.Accent
+		end
+	end
+
+	-- target selection
+	local function isBehindWall(fromPos, part)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { LP.Character }
+		local dir = part.Position - fromPos
+		local hit = Workspace:Raycast(fromPos, dir, params)
+		return hit ~= nil and not hit.Instance:IsDescendantOf(part.Parent)
+	end
+
+	local function getHitPart(p, mode)
+		if mode == "Head" then return Entity.getHead(p) end
+		if mode == "Torso" then return Entity.getTorso(p) end
+		if mode == "HeadTorso" then
+			return Entity.getHead(p) or Entity.getTorso(p)
+		end
+		return Entity.getHead(p)
+	end
+
+	function Aimbot.findTarget(opts)
+		opts = opts or {}
+		local cam = Workspace.CurrentCamera
+		if not cam then return nil end
+		local myPos = Entity.getRoot(LP) and Entity.getRoot(LP).Position or cam.CFrame.Position
+		local best, bestScore = nil, math.huge
+		local fov = opts.FOV or CONFIG.Aimbot.FOV
+		local maxDist = opts.MaxDist or CONFIG.Aimbot.MaxDist
+		local teamCheck = opts.TeamCheck ~= false
+		local wallCheck = opts.WallCheck ~= false
+		local hitMode = opts.HitPart or CONFIG.Aimbot.HitPart
+		local screenCenter = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= LP and Entity.isAlive(p) then
+				if not Entity.isFriendly(p, teamCheck) then
+					local dist = Entity.distTo(p)
+					if dist <= maxDist then
+						local part = getHitPart(p, hitMode)
+						if part then
+							local sp = Entity.worldToScreen(part.Position)
+							if sp then
+								local mag = (sp - screenCenter).Magnitude
+								if mag <= fov then
+									if not wallCheck or Entity.isVisible(p, part) then
+										-- score: prefer closer to crosshair, then closer to player
+										local score = mag + dist * 0.05
+										if score < bestScore then
+											bestScore = score
+											best = { player = p, part = part, screenPos = sp, dist = dist }
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		return best
+	end
+
+	-- apply aim
+	local function aimAt(cam, target, smooth)
+		local goalCF = CFrame.new(cam.CFrame.Position, target.part.Position)
+		if smooth >= 1 then
+			cam.CFrame = goalCF
+		else
+			cam.CFrame = cam.CFrame:Lerp(goalCF, smooth)
+		end
+	end
+
+	-- lock state
+	local aimActive = false
+	local aimKeyHeld = false
+	UIS.InputBegan:Connect(function(i, gp)
+		if gp then return end
+		if i.KeyCode == CONFIG.Aimbot.Key then aimKeyHeld = true end
+		if i.KeyCode == CONFIG.Keybind or i.KeyCode == CONFIG.KeybindAlt then
+			EPIX.State.GuiRefs.Toggle and EPIX.State.GuiRefs.Toggle()
+		end
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if i.KeyCode == CONFIG.Aimbot.Key then aimKeyHeld = false end
+	end)
+
+	-- main loop
+	function Aimbot.start()
+		if EPIX.State.Aimbot_Conn then EPIX.State.Aimbot_Conn:Disconnect() end
+		EPIX.State.Aimbot_Conn = RunService.RenderStepped:Connect(function(dt)
+			updateFOVRing()
+			if not CONFIG.Aimbot.Enabled then return end
+			local cam = Workspace.CurrentCamera
+			if not cam then return end
+
+			-- cam tracking (auto lock regardless of key)
+			if CONFIG.Aimbot.CamTrack then
+				local tgt = Aimbot.findTarget({
+					FOV = CONFIG.Aimbot.FOV,
+					MaxDist = CONFIG.Aimbot.MaxDist,
+					TeamCheck = CONFIG.Aimbot.TeamCheck,
+					WallCheck = CONFIG.Aimbot.WallCheck,
+					HitPart = CONFIG.Aimbot.HitPart,
+				})
+				EPIX.State.Aimbot_Target = tgt
+				if tgt then aimAt(cam, tgt, CONFIG.Aimbot.CamSmooth) end
+			end
+
+			-- key-held aim
+			if aimKeyHeld or CONFIG.Aimbot.AlwaysOn then
+				local tgt = Aimbot.findTarget({
+					FOV = CONFIG.Aimbot.FOV,
+					MaxDist = CONFIG.Aimbot.MaxDist,
+					TeamCheck = CONFIG.Aimbot.TeamCheck,
+					WallCheck = CONFIG.Aimbot.WallCheck,
+					HitPart = CONFIG.Aimbot.HitPart,
+				})
+				EPIX.State.Aimbot_Target = tgt
+				if tgt then
+					aimAt(cam, tgt, CONFIG.Aimbot.Smoothing)
+					-- autofire
+					if CONFIG.Aimbot.AutoFire and tick() - (EPIX.State.LastAutoFire or 0) > CONFIG.Aimbot.AutoFireRate then
+						EPIX.State.LastAutoFire = tick()
+						pcall(function()
+							if mouse1click then mouse1click() end
+							if mouse1press and mouse1release then
+								mouse1press(); task.wait(0.02); mouse1release()
+							end
+						end)
+					end
+				end
+			end
+		end)
+	end
+
+	function Aimbot.stop()
+		if EPIX.State.Aimbot_Conn then
+			EPIX.State.Aimbot_Conn:Disconnect()
+			EPIX.State.Aimbot_Conn = nil
+		end
+		if FOVRing then FOVRing.Visible = false end
+	end
+
+	function Aimbot.target()
+		return EPIX.State.Aimbot_Target
+	end
+
+	EPIX.Aimbot = Aimbot
+	print("[EPIX] aimbot engine ready")
+end)
+
+EPIX.register(6, "silent", function()
+	local RunService = EPIX.S.RunService
+	local Workspace  = EPIX.S.Workspace
+	local Players    = EPIX.S.Players
+	local UIS        = EPIX.S.UserInputService
+
+	local Entity     = EPIX.Entity
+	local LP         = EPIX.LP
+	local CONFIG     = EPIX.CONFIG
+
+	local Silent = {}
+	local Aimbot  = EPIX.Aimbot
+
+	-- Silent aim: hook the raycast / namecall of the game's gun client.
+	-- Falls back to spoofing the mouse hit if game uses UserInputService.
+
+	local hookInstalled = false
+	local oldNamecall   = nil
+
+	local function getSilentTarget()
+		return Aimbot.findTarget({
+			FOV = CONFIG.Silent.FOV,
+			MaxDist = CONFIG.Silent.MaxDist,
+			TeamCheck = CONFIG.Silent.TeamCheck,
+			WallCheck = CONFIG.Silent.WallCheck,
+			HitPart = CONFIG.Silent.HitPart,
+		})
+	end
+
+	local function rewriteArg(arg)
+		if typeof(arg) == "Vector3" then
+			local tgt = EPIX.State.Silent_Target
+			if tgt then
+				local predicted = tgt.part.Position + (tgt.part.AssemblyLinearVelocity or Vector3.zero) * CONFIG.Silent.PredAmt
+				return predicted
+			end
+		end
+		if typeof(arg) == "CFrame" then
+			local tgt = EPIX.State.Silent_Target
+			if tgt then
+				return CFrame.new(tgt.part.Position)
+			end
+		end
+		if typeof(arg) == "Instance" and arg:IsA("BasePart") then
+			local tgt = EPIX.State.Silent_Target
+			if tgt then
+				return tgt.part
+			end
+		end
+		return arg
+	end
+
+	function Silent.install()
+		if hookInstalled then return true end
+		local mt = getrawmetatable and getrawmetatable(game)
+		if not mt then return false, "no getrawmetatable" end
+
+		local oldNC = mt.__namecall
+		oldNamecall = oldNC
+		setreadonly(mt, false)
+
+		mt.__namecall = newcclosure(function(self, ...)
+			local method = getnamecallmethod()
+			if CONFIG.Silent.Enabled and not checkcaller() then
+				local tgt = getSilentTarget()
+				EPIX.State.Silent_Target = tgt
+				if tgt then
+					local args = { ... }
+					local newArgs = {}
+					for i = 1, #args do
+						newArgs[i] = rewriteArg(args[i])
+					end
+					return oldNC(self, unpack(newArgs))
+				end
+			end
+			return oldNC(self, ...)
+		end)
+
+		setreadonly(mt, true)
+		hookInstalled = true
+		return true
+	end
+
+	function Silent.uninstall()
+		if not hookInstalled then return end
+		local mt = getrawmetatable and getrawmetatable(game)
+		if mt and oldNamecall then
+			setreadonly(mt, false)
+			mt.__namecall = oldNamecall
+			setreadonly(mt, true)
+		end
+		hookInstalled = false
+	end
+
+	-- optional: UserInputService MouseClick rewrite (some games)
+	local function installMouseHook()
+		if EPIX.State.Silent_MouseConn then return end
+		local oldBind = UIS.InputBegan
+		-- no-op — the namecall hook covers most cases
+	end
+
+	function Silent.start()
+		Silent.install()
+		installMouseHook()
+		-- heartbeat refresher so target is fresh even without a click
+		if EPIX.State.Silent_Conn then EPIX.State.Silent_Conn:Disconnect() end
+		EPIX.State.Silent_Conn = RunService.Heartbeat:Connect(function()
+			if CONFIG.Silent.Enabled then
+				EPIX.State.Silent_Target = getSilentTarget()
+			else
+				EPIX.State.Silent_Target = nil
+			end
+		end)
+	end
+
+	function Silent.stop()
+		if EPIX.State.Silent_Conn then
+			EPIX.State.Silent_Conn:Disconnect()
+			EPIX.State.Silent_Conn = nil
+		end
+		EPIX.State.Silent_Target = nil
+	end
+
+	EPIX.Silent = Silent
+	print("[EPIX] silent aim module ready")
+end)
+
+EPIX.register(7, "autofarm", function()
+	local RunService = EPIX.S.RunService
+	local Workspace  = EPIX.S.Workspace
+	local Players    = EPIX.S.Players
+
+	local Entity     = EPIX.Entity
+	local LP         = EPIX.LP
+	local CONFIG     = EPIX.CONFIG
+
+	local Autofarm = {}
+
+	local function pickNextTarget(exclude)
+		local best, bestD = nil, math.huge
+		local myRoot = Entity.getRoot(LP)
+		if not myRoot then return nil end
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= LP and p ~= exclude and Entity.isAlive(p) then
+				if not Entity.isFriendly(p, CONFIG.Autofarm.TeamCheck) then
+					local d = Entity.distTo(p)
+					if d <= CONFIG.Autofarm.Range and d < bestD then
+						bestD = d
+						best = p
+					end
+				end
+			end
+		end
+		return best
+	end
+
+	local function rideOn(target)
+		local myRoot = Entity.getRoot(LP)
+		local tgtRoot = Entity.getRoot(target)
+		if not myRoot or not tgtRoot then return false end
+		local tgtHead = Entity.getHead(target)
+		local anchor = tgtHead and tgtHead.Position or tgtRoot.Position
+		myRoot.CFrame = CFrame.new(anchor + Vector3.new(0, 2.5, 0))
+		return true
+	end
+
+	local function shootHead(target)
+		local head = Entity.getHead(target)
+		if not head then return false end
+		local cam = Workspace.CurrentCamera
+		if not cam then return false end
+		cam.CFrame = CFrame.new(cam.CFrame.Position, head.Position)
+		task.wait(0.05)
+		pcall(function()
+			if mouse1click then mouse1click() end
+			if mouse1press and mouse1release then
+				mouse1press(); task.wait(0.02); mouse1release()
+			end
+		end)
+		return true
+	end
+
+	local function runCycle()
+		if not CONFIG.Autofarm.Enabled then return end
+		local target = pickNextTarget(EPIX.State.Autofarm_Current)
+		if not target then
+			task.wait(0.4)
+			return
+		end
+		EPIX.State.Autofarm_Current = target
+
+		-- ride
+		for _ = 1, 3 do
+			if not rideOn(target) then break end
+			task.wait(CONFIG.Autofarm.HopDelay)
+		end
+
+		-- headshot
+		for _ = 1, 3 do
+			if not Entity.isAlive(target) then break end
+			shootHead(target)
+			task.wait(CONFIG.Autofarm.KillDelay)
+		end
+
+		EPIX.State.Autofarm_Cycles = (EPIX.State.Autofarm_Cycles or 0) + 1
+		if CONFIG.Autofarm.MaxCycles > 0
+		and EPIX.State.Autofarm_Cycles >= CONFIG.Autofarm.MaxCycles then
+			CONFIG.Autofarm.Enabled = false
+			EPIX.State.Autofarm_Active = false
+		end
+	end
+
+	function Autofarm.start()
+		if EPIX.State.Autofarm_Conn then EPIX.State.Autofarm_Conn:Disconnect() end
+		EPIX.State.Autofarm_Active = true
+		EPIX.State.Autofarm_Cycles = 0
+		EPIX.State.Autofarm_Current = nil
+		EPIX.State.Autofarm_Conn = RunService.Heartbeat:Connect(function()
+			if not CONFIG.Autofarm.Enabled then return end
+			if EPIX.State.Autofarm_Busy then return end
+			EPIX.State.Autofarm_Busy = true
+			task.spawn(function()
+				local ok, err = pcall(runCycle)
+				if not ok then warn("[EPIX autofarm]", err) end
+				EPIX.State.Autofarm_Busy = false
+			end)
+		end)
+	end
+
+	function Autofarm.stop()
+		if EPIX.State.Autofarm_Conn then
+			EPIX.State.Autofarm_Conn:Disconnect()
+			EPIX.State.Autofarm_Conn = nil
+		end
+		EPIX.State.Autofarm_Active = false
+	end
+
+	EPIX.Autofarm = Autofarm
+	print("[EPIX] autofarm ready")
+end)
+
+EPIX.register(8, "extras", function()
+	local RunService = EPIX.S.RunService
+	local Workspace  = EPIX.S.Workspace
+	local Lighting   = EPIX.S.Lighting
+	local Stats      = EPIX.S.Stats
+	local Players    = EPIX.S.Players
+
+	local Entity     = EPIX.Entity
+	local LP         = EPIX.LP
+	local CONFIG     = EPIX.CONFIG
+	local T          = EPIX.T
+
+	--========================================================================
+	-- CLIENT RGB (only your own UGC / gun / knife)
+	--========================================================================
+	local RGB = {}
+
+	local function allDescendants(root)
+		local list = {}
+		local stack = { root }
+		while #stack > 0 do
+			local n = table.remove(stack)
+			table.insert(list, n)
+			for _, c in ipairs(n:GetChildren()) do
+				table.insert(stack, c)
+			end
+		end
+		return list
+	end
+
+	local function isMine(inst)
+		if not inst then return false end
+		local ok, p = pcall(function() return Players:GetPlayerFromCharacter(inst) end)
+		if ok and p == LP then return true end
+		if inst:IsDescendantOf(LP.Character) then return true end
+		return false
+	end
+
+	local function tintPart(part, color)
+		if part:IsA("BasePart") then
+			pcall(function()
+				part.Color = color
+				if part:FindFirstChildOfClass("SurfaceAppearance") then
+					part:FindFirstChildOfClass("SurfaceAppearance"):Destroy()
+				end
+			end)
+		elseif part:IsA("Decal") or part:IsA("Texture") then
+			pcall(function() part.Color3 = color end)
+		elseif part:IsA("SpecialMesh") or part:IsA("MeshPart") then
+			pcall(function() part.VertexColor = Vector3.new(color.R, color.G, color.B) end)
+		end
+	end
+
+	function RGB.start()
+		if EPIX.State.RGB_Conn then EPIX.State.RGB_Conn:Disconnect() end
+		EPIX.State.RGB_Conn = RunService.Heartbeat:Connect(function()
+			if not CONFIG.ClientRGB.Enabled then return end
+			local color = EPIX.Theme.rgb(CONFIG.ClientRGB.Speed)
+			local targets = {}
+
+			if CONFIG.ClientRGB.ApplyChar then
+				if LP.Character then
+					for _, d in ipairs(allDescendants(LP.Character)) do
+						table.insert(targets, d)
+					end
+				end
+			end
+
+			if CONFIG.ClientRGB.ApplyWeapons then
+				local char = LP.Character
+				if char then
+					for _, c in ipairs(char:GetChildren()) do
+						if c:IsA("Tool") then
+							for _, d in ipairs(allDescendants(c)) do
+								table.insert(targets, d)
+							end
+						end
+					end
+				end
+			end
+
+			for _, d in ipairs(targets) do
+				if isMine(d) then tintPart(d, color) end
+			end
+		end)
+	end
+
+	function RGB.stop()
+		if EPIX.State.RGB_Conn then
+			EPIX.State.RGB_Conn:Disconnect()
+			EPIX.State.RGB_Conn = nil
+		end
+	end
+
+	EPIX.RGB = RGB
+
+	--========================================================================
+	-- POTATO MODE (kill grass, trees, decals, particles)
+	--========================================================================
+	local Potato = {}
+
+	local function hideInstance(inst)
+		EPIX.State.Potato_Saved[inst] = inst.Parent
+		pcall(function()
+			if inst:IsA("BasePart") then inst.Transparency = 1 end
+			if inst:IsA("Decal") then inst.Transparency = 1 end
+			if inst:IsA("Texture") then inst.Transparency = 1 end
+			if inst:IsA("ParticleEmitter") then inst.Enabled = false end
+			if inst:IsA("Trail") then inst.Enabled = false end
+			if inst:IsA("Beam") then inst.Enabled = false end
+			if inst:IsA("BillboardGui") then inst.Enabled = false end
+			if inst:IsA("SurfaceGui") then inst.Enabled = false end
+			if inst:IsA("Model") then
+				for _, d in ipairs(inst:GetDescendants()) do
+					if d:IsA("BasePart") then d.Transparency = 1 end
+				end
+			end
+		end)
+	end
+
+	function Potato.apply()
+		local saved = {}
+		local function sweep(container)
+			for _, inst in ipairs(container:GetChildren()) do
+				local n = inst.Name:lower()
+				if CONFIG.Potato.RemoveGrass and (n:find("grass") or n:find("terrain") and inst:IsA("BasePart")) then
+					hideInstance(inst)
+				elseif CONFIG.Potato.RemoveTrees and (n:find("tree") or n:find("bush") or n:find("foliage")) then
+					hideInstance(inst)
+				elseif CONFIG.Potato.RemoveDecals and inst:IsA("Decal") then
+					hideInstance(inst)
+				elseif CONFIG.Potato.RemoveParticles and (inst:IsA("ParticleEmitter") or inst:IsA("Trail") or inst:IsA("Beam")) then
+					hideInstance(inst)
+				elseif CONFIG.Potato.RemoveBillboards and inst:IsA("BillboardGui") then
+					hideInstance(inst)
+				elseif inst:IsA("Folder") or inst:IsA("Model") then
+					sweep(inst)
+				end
+			end
+		end
+		pcall(function() sweep(Workspace) end)
+
+		if CONFIG.Potato.ForceLOD then
+			pcall(function()
+				for _, d in ipairs(Workspace:GetDescendants()) do
+					if d:IsA("Model") then
+						pcall(function() d.LevelOfDetail = Enum.ModelLevelOfDetail.Disabled end)
+					end
+				end
+			end)
+		end
+
+		if CONFIG.Potato.SkipMaterials then
+			pcall(function()
+				Lighting.GlobalShadows = false
+				Lighting.FogEnd = 5000
+			end)
+		end
+	end
+
+	function Potato.restore()
+		for inst, parent in next, EPIX.State.Potato_Saved do
+			if inst and inst.Parent == nil and parent then
+				pcall(function() inst.Parent = parent end)
+			end
+			pcall(function()
+				if inst:IsA("BasePart") then inst.Transparency = 0 end
+				if inst:IsA("Decal") then inst.Transparency = 0 end
+				if inst:IsA("Texture") then inst.Transparency = 0 end
+				if inst:IsA("ParticleEmitter") then inst.Enabled = true end
+				if inst:IsA("Trail") then inst.Enabled = true end
+				if inst:IsA("Beam") then inst.Enabled = true end
+				if inst:IsA("BillboardGui") then inst.Enabled = true end
+			end)
+		end
+		EPIX.State.Potato_Saved = {}
+	end
+
+	EPIX.Potato = Potato
+
+	--========================================================================
+	-- ASSET CULLER (hide building/props beyond max dist)
+	--========================================================================
+	local Culler = {}
+
+	function Culler.start()
+		if EPIX.State.Culler_Conn then EPIX.State.Culler_Conn:Disconnect() end
+		EPIX.State.Culler_Conn = RunService.Heartbeat:Connect(function()
+			if not CONFIG.Culler.Enabled then return end
+			local myRoot = Entity.getRoot(LP)
+			if not myRoot then return end
+			local cam = Workspace.CurrentCamera
+			if not cam then return end
+			for _, inst in ipairs(Workspace:GetChildren()) do
+				if inst:IsA("Model") or inst:IsA("BasePart") then
+					local n = inst.Name:lower()
+					local isTarget = false
+					if CONFIG.Culler.Targets == "All" then isTarget = true
+					elseif CONFIG.Culler.Targets == "Building" and
+						(n:find("build") or n:find("house") or n:find("structure") or
+						 n:find("wall") or n:find("tower")) then isTarget = true
+					elseif CONFIG.Culler.Targets == "Props" and
+						(n:find("prop") or n:find("crate") or n:find("barrel")) then isTarget = true end
+					if isTarget then
+						local ok, pos = pcall(function()
+							return inst:IsA("BasePart") and inst.Position or inst:GetPivot().Position
+						end)
+						if ok and pos then
+							local d = (pos - myRoot.Position).Magnitude
+							local shouldHide = d > CONFIG.Culler.MaxDist
+							pcall(function()
+								if shouldHide then
+									if inst:IsA("BasePart") then inst.LocalTransparencyModifier = 1
+									else for _, p in ipairs(inst:GetDescendants()) do
+										if p:IsA("BasePart") then p.LocalTransparencyModifier = 1 end
+									end end
+								else
+									if inst:IsA("BasePart") then inst.LocalTransparencyModifier = 0
+									else for _, p in ipairs(inst:GetDescendants()) do
+										if p:IsA("BasePart") then p.LocalTransparencyModifier = 0 end
+									end end
+								end
+							end)
+						end
+					end
+				end
+			end
+		end)
+	end
+
+	function Culler.stop()
+		if EPIX.State.Culler_Conn then
+			EPIX.State.Culler_Conn:Disconnect()
+			EPIX.State.Culler_Conn = nil
+		end
+	end
+
+	EPIX.Culler = Culler
+
+	--========================================================================
+	-- VISUALS (fullbright, no fog, FOV override)
+	--========================================================================
+	local Visuals = {}
+	local savedLighting = nil
+
+	function Visuals.apply()
+		if not savedLighting then
+			savedLighting = {
+				Ambient = Lighting.Ambient,
+				OutdoorAmbient = Lighting.OutdoorAmbient,
+				ClockTime = Lighting.ClockTime,
+				FogEnd = Lighting.FogEnd,
+				Brightness = Lighting.Brightness,
+			}
+		end
+		pcall(function()
+			if CONFIG.Visuals.Fullbright then
+				Lighting.Ambient = CONFIG.Visuals.Ambient
+				Lighting.OutdoorAmbient = CONFIG.Visuals.OutdoorAmb
+				Lighting.Brightness = 3
+			end
+			if CONFIG.Visuals.NoFog then
+				Lighting.FogEnd = 1e6
+				Lighting.FogStart = 1e6
+			end
+			Lighting.ClockTime = CONFIG.Visuals.ClockTime
+		end)
+	end
+
+	function Visuals.restore()
+		if not savedLighting then return end
+		pcall(function()
+			Lighting.Ambient = savedLighting.Ambient
+			Lighting.OutdoorAmbient = savedLighting.OutdoorAmbient
+			Lighting.ClockTime = savedLighting.ClockTime
+			Lighting.FogEnd = savedLighting.FogEnd
+			Lighting.Brightness = savedLighting.Brightness
+		end)
+		savedLighting = nil
+	end
+
+	EPIX.Visuals = Visuals
+
+	--========================================================================
+	-- OPTIMIZE (FPS cap, FPS counter, entity counter)
+	--========================================================================
+	local Optimize = {}
+
+	local function getFPS()
+		local ok, v = pcall(function()
+			return math.floor(1 / RunService.RenderStepped:Wait())
+		end)
+		return ok and v or 0
+	end
+
+	function Optimize.start()
+		if EPIX.State.Optimize_Conn then EPIX.State.Optimize_Conn:Disconnect() end
+		EPIX.State.Optimize_Conn = RunService.Heartbeat:Connect(function()
+			if CONFIG.Optimize.LowMem and collectgarbage then
+				collectgarbage("collect")
+			end
+		end)
+	end
+
+	function Optimize.stop()
+		if EPIX.State.Optimize_Conn then
+			EPIX.State.Optimize_Conn:Disconnect()
+			EPIX.State.Optimize_Conn = nil
+		end
+	end
+
+	function Optimize.fps()
+		return math.floor(1 / (RunService.RenderStepped:Wait() or 0.016))
+	end
+
+	EPIX.Optimize = Optimize
+
+	print("[EPIX] extras ready (RGB, potato, culler, visuals, optimize)")
+end)
+
+EPIX.register(9, "gui", function()
+	local UIS = EPIX.S.UserInputService
+	local TweenService = EPIX.S.TweenService
+
+	local CONFIG = EPIX.CONFIG
+	local T = EPIX.T
+	local PARENT = EPIX.PARENT
+
+	local GUI = {}
+
+	--========================================================================
+	-- factory
+	--========================================================================
+	local function new(c, p, parent)
+		local o = Instance.new(c)
+		if p then for k, v in next, p do o[k] = v end end
+		if parent then o.Parent = parent end
+		return o
+	end
+	local function corner(p, r) return new("UICorner", { CornerRadius = UDim.new(0, r or T.Radius) }, p) end
+	local function stroke(p, c, t, tr)
+		return new("UIStroke", {
+			Color = c or T.Stroke, Thickness = t or 1,
+			Transparency = tr or 0.85,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		}, p)
+	end
+	local function pad(p, t, r, b, l)
+		return new("UIPadding", {
+			PaddingTop = UDim.new(0, t or 0), PaddingRight = UDim.new(0, r or 0),
+			PaddingBottom = UDim.new(0, b or 0), PaddingLeft = UDim.new(0, l or 0),
+		}, p)
+	end
+	local function grad(p, c1, c2, rot)
+		return new("UIGradient", {
+			Color = ColorSequence.new(c1 or T.Accent, c2 or T.Accent2),
+			Rotation = rot or 90,
+		}, p)
+	end
+
+	--========================================================================
+	-- root
+	--========================================================================
+	if PARENT:FindFirstChild("EpixBackfire") then
+		PARENT.EpixBackfire:Destroy()
+	end
+
+	local Screen = new("ScreenGui", {
+		Name = "EpixBackfire", ResetOnSpawn = false, IgnoreGuiInset = true,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 1000,
+	}, PARENT)
+
+	local Backdrop = new("TextButton", {
+		Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = 0.65, Text = "", AutoButtonColor = false,
+		Visible = false, BorderSizePixel = 0, ZIndex = 1,
+	}, Screen)
+
+	local Main = new("Frame", {
+		Name = "Main", Size = UDim2.fromOffset(420, 540),
+		Position = UDim2.new(0, 40, 0.5, -270),
+		BackgroundColor3 = T.Panel, BorderSizePixel = 0,
+		Active = true, ClipsDescendants = true, ZIndex = 10, Visible = false,
+	}, Screen)
+	corner(Main, 14)
+	stroke(Main, Color3.fromRGB(120, 90, 200), 1.4, 0.55)
+	grad(Main, Color3.fromRGB(24, 18, 40), Color3.fromRGB(14, 10, 24), 135).Transparency =
+		NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0.05),
+			NumberSequenceKeypoint.new(1, 0.35),
+		})
+
+	--========================================================================
+	-- header
+	--========================================================================
+	local Header = new("Frame", {
+		Size = UDim2.new(1, 0, 0, 68), BackgroundColor3 = T.Bg,
+		BorderSizePixel = 0, ZIndex = 11,
+	}, Main)
+	corner(Header, 14)
+	grad(Header, T.Accent3, T.Accent, 0).Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.85),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+
+	local Logo = new("TextLabel", {
+		Size = UDim2.fromOffset(46, 46), Position = UDim2.fromOffset(14, 11),
+		BackgroundColor3 = T.Accent, Text = "E", TextColor3 = Color3.fromRGB(255,255,255),
+		Font = Enum.Font.GothamBlack, TextSize = 24, BorderSizePixel = 0, ZIndex = 12,
+	}, Header)
+	corner(Logo, 12)
+	grad(Logo, T.Accent, T.Accent2, 45)
+
+	new("TextLabel", {
+		Size = UDim2.new(1, -200, 0, 20), Position = UDim2.fromOffset(72, 14),
+		BackgroundTransparency = 1,
+		Text = EPIX.Meta.Name .. " " .. EPIX.Meta.Version,
+		TextColor3 = T.Text, Font = Enum.Font.GothamBold, TextSize = 15,
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+	}, Header)
+
+	new("TextLabel", {
+		Size = UDim2.new(1, -200, 0, 14), Position = UDim2.fromOffset(72, 36),
+		BackgroundTransparency = 1,
+		Text = "credit to " .. EPIX.Meta.Credit,
+		TextColor3 = T.TextDim, Font = Enum.Font.Gotham, TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+	}, Header)
+
+	local BtnRow = new("Frame", {
+		Size = UDim2.fromOffset(102, 28), Position = UDim2.new(1, -112, 0, 20),
+		BackgroundTransparency = 1, ZIndex = 12,
+	}, Header)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6),
+		HorizontalAlignment = Enum.HorizontalAlignment.Right,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+	}, BtnRow)
+
+	local function winBtn(glyph, c)
+		local b = new("TextButton", {
+			Size = UDim2.fromOffset(28, 28), BackgroundColor3 = T.Card,
+			Text = glyph, TextColor3 = c or T.Text, Font = Enum.Font.GothamBold,
+			TextSize = 15, BorderSizePixel = 0, AutoButtonColor = false, ZIndex = 13,
+		}, BtnRow)
+		corner(b, 14)
+		return b
+	end
+	local BtnMin = winBtn("-")
+	local BtnExp = winBtn("+")
+	local BtnClose = winBtn("x", T.Danger)
+
+	--========================================================================
+	-- tabs
+	--========================================================================
+	local TabBar = new("Frame", {
+		Size = UDim2.new(1, -20, 0, 34), Position = UDim2.fromOffset(10, 78),
+		BackgroundColor3 = T.Bg, BorderSizePixel = 0, ZIndex = 11,
+	}, Main)
+	corner(TabBar, 10)
+	new("UIListLayout", {
+		FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4),
+		HorizontalAlignment = Enum.HorizontalAlignment.Center,
+		VerticalAlignment = Enum.VerticalAlignment.Center,
+	}, TabBar)
+	pad(TabBar, 4, 4, 4, 4)
+
+	local Content = new("ScrollingFrame", {
+		Size = UDim2.new(1, -20, 1, -196), Position = UDim2.fromOffset(10, 118),
+		BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 3, ScrollBarImageColor3 = T.Accent,
+		CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ZIndex = 11,
+	}, Main)
+	new("UIListLayout", {
+		Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder,
+	}, Content)
+	pad(Content, 0, 6, 0, 0)
+
+	local Footer = new("Frame", {
+		Size = UDim2.new(1, -20, 0, 42), Position = UDim2.new(0, 10, 1, -52),
+		BackgroundColor3 = T.Bg, BorderSizePixel = 0, ZIndex = 11,
+	}, Main)
+	corner(Footer, 10)
+
+	local StatusDot = new("Frame", {
+		Size = UDim2.fromOffset(8, 8), Position = UDim2.fromOffset(12, 17),
+		BackgroundColor3 = T.Success, BorderSizePixel = 0, ZIndex = 12,
+	}, Footer)
+	corner(StatusDot, 4)
+	stroke(StatusDot, T.Success, 1, 0.4)
+
+	local StatusLbl = new("TextLabel", {
+		Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(28, 0),
+		BackgroundTransparency = 1, Text = "ready", TextColor3 = T.TextDim,
+		Font = Enum.Font.Gotham, TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+	}, Footer)
+
+	local function setStatus(t, c)
+		StatusLbl.Text = t
+		if c then StatusDot.BackgroundColor3 = c end
+	end
+	GUI.setStatus = setStatus
+
+	--========================================================================
+	-- pages
+	--========================================================================
+	local Pages, TabBtns = {}, {}
+	local CurrentTab
+
+	local function registerPage(name)
+		local p = new("Frame", {
+			Name = name, Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
+			Visible = false, ZIndex = 11,
+		}, Content)
+		new("UIListLayout", {
+			Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder,
+		}, p)
+		Pages[name] = p
+		return p
+	end
+
+	local function selectTab(name)
+		for n, p in next, Pages do p.Visible = (n == name) end
+		for n, b in next, TabBtns do
+			b.TextColor3 = (n == name) and T.Text or T.TextDim
+			b.BackgroundColor3 = (n == name) and T.Accent or T.Card
+		end
+		CurrentTab = name
+	end
+
+	local function makeTab(label, name)
+		local b = new("TextButton", {
+			Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundColor3 = T.Card, Text = label, TextColor3 = T.TextDim,
+			Font = Enum.Font.GothamMedium, TextSize = 11, BorderSizePixel = 0,
+			AutoButtonColor = false, ZIndex = 12,
+		}, TabBar)
+		corner(b, 8)
+		pad(b, 0, 9, 0, 9)
+		new("UISizeConstraint", { MinSize = Vector2.new(48, 0) }, b)
+		b.MouseButton1Click:Connect(function() selectTab(name) end)
+		TabBtns[name] = b
+		return b
+	end
+
+	--========================================================================
+	-- presets
+	--========================================================================
+	local Presets = {}
+
+	function Presets.toggle(label, desc, default, cb)
+		local c = new("TextButton", {
+			Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = T.Card,
+			Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 11,
+		}, Pages[CurrentTab])
+		corner(c, 10)
+		stroke(c, Color3.fromRGB(90, 70, 140), 1, 0.72)
+
+		new("TextLabel", {
+			Size = UDim2.new(1, -80, 0, 18), Position = UDim2.fromOffset(14, 11),
+			BackgroundTransparency = 1, Text = label, TextColor3 = T.Text,
+			Font = Enum.Font.GothamBold, TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+		}, c)
+		new("TextLabel", {
+			Size = UDim2.new(1, -80, 0, 14), Position = UDim2.fromOffset(14, 30),
+			BackgroundTransparency = 1, Text = desc or "", TextColor3 = T.TextDim,
+			Font = Enum.Font.Gotham, TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+		}, c)
+
+		local pill = new("Frame", {
+			Size = UDim2.fromOffset(46, 24), Position = UDim2.new(1, -60, 0.5, -12),
+			BackgroundColor3 = default and T.Accent or T.Off,
+			BorderSizePixel = 0, ZIndex = 12,
+		}, c)
+		corner(pill, 12)
+
+		local dot = new("Frame", {
+			Size = UDim2.fromOffset(18, 18),
+			Position = default and UDim2.new(1, -22, 0.5, -9) or UDim2.fromOffset(3, 3),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BorderSizePixel = 0, ZIndex = 13,
+		}, pill)
+		corner(dot, 9)
+
+		local on = default
+		c.MouseButton1Click:Connect(function()
+			on = not on
+			TweenService:Create(pill, TweenInfo.new(0.15),
+				{ BackgroundColor3 = on and T.Accent or T.Off }):Play()
+			TweenService:Create(dot, TweenInfo.new(0.15), {
+				Position = on and UDim2.new(1, -22, 0.5, -9) or UDim2.fromOffset(3, 3),
+			}):Play()
+			local ok, err = pcall(cb, on)
+			if ok then setStatus(label .. (on and "  ON" or "  OFF"),
+				on and T.Success or T.TextDim)
+			else warn("[EPIX]", label, err); setStatus(label .. "  FAILED", T.Danger) end
+		end)
+		return c
+	end
+
+	function Presets.slider(label, min, max, default, cb)
+		local c = new("Frame", {
+			Size = UDim2.new(1, 0, 0, 78), BackgroundColor3 = T.Card,
+			BorderSizePixel = 0, ZIndex = 11,
+		}, Pages[CurrentTab])
+		corner(c, 10)
+		stroke(c, Color3.fromRGB(90, 70, 140), 1, 0.72)
+
+		new("TextLabel", {
+			Size = UDim2.new(1, -80, 0, 18), Position = UDim2.fromOffset(14, 12),
+			BackgroundTransparency = 1, Text = label, TextColor3 = T.Text,
+			Font = Enum.Font.GothamBold, TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+		}, c)
+
+		local val = new("TextLabel", {
+			Size = UDim2.fromOffset(90, 18), Position = UDim2.new(1, -104, 0, 12),
+			BackgroundTransparency = 1, Text = tostring(default),
+			TextColor3 = T.Accent, Font = Enum.Font.GothamBold, TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 12,
+		}, c)
+
+		local bar = new("Frame", {
+			Size = UDim2.new(1, -28, 0, 12), Position = UDim2.fromOffset(14, 44),
+			BackgroundColor3 = T.Off, BorderSizePixel = 0, ZIndex = 12,
+		}, c)
+		corner(bar, 6)
+
+		local fill = new("Frame", {
+			Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+			BackgroundColor3 = T.Accent, BorderSizePixel = 0, ZIndex = 13,
+		}, bar)
+		corner(fill, 6)
+		grad(fill, T.Accent, T.Accent2, 0)
+
+		local thumb = new("Frame", {
+			Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BorderSizePixel = 0, ZIndex = 14,
+		}, bar)
+		corner(thumb, 10)
+		stroke(thumb, T.Accent, 2, 0.2)
+
+		local dragging = false
+		local function update(x)
+			local p = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+			local v = math.floor(min + (max - min) * p + 0.5)
+			fill.Size = UDim2.new(p, 0, 1, 0)
+			thumb.Position = UDim2.new(p, 0, 0.5, 0)
+			val.Text = tostring(v)
+			pcall(cb, v)
+		end
+
+		local pad2 = new("TextButton", {
+			Size = UDim2.new(1, 0, 0, 34), Position = UDim2.fromOffset(0, 34),
+			BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 15,
+		}, c)
+
+		pad2.InputBegan:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1
+			or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = true; update(i.Position.X)
+			end
+		end)
+		UIS.InputChanged:Connect(function(i)
+			if not dragging then return end
+			if i.UserInputType == Enum.UserInputType.MouseMovement
+			or i.UserInputType == Enum.UserInputType.Touch then
+				update(i.Position.X)
+			end
+		end)
+		UIS.InputEnded:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1
+			or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
+		return c
+	end
+
+	function Presets.action(label, desc, cb)
+		local c = new("TextButton", {
+			Size = UDim2.new(1, 0, 0, 52), BackgroundColor3 = T.Card,
+			Text = "", AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 11,
+		}, Pages[CurrentTab])
+		corner(c, 10)
+		stroke(c, T.Accent, 1.2, 0.5)
+
+		new("TextLabel", {
+			Size = UDim2.new(1, -50, 0, 18), Position = UDim2.fromOffset(14, 10),
+			BackgroundTransparency = 1, Text = label, TextColor3 = T.Text,
+			Font = Enum.Font.GothamBold, TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+		}, c)
+		new("TextLabel", {
+			Size = UDim2.new(1, -50, 0, 14), Position = UDim2.fromOffset(14, 28),
+			BackgroundTransparency = 1, Text = desc or "tap", TextColor3 = T.TextDim,
+			Font = Enum.Font.Gotham, TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+		}, c)
+
+		local a = new("TextLabel", {
+			Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -42, 0.5, -14),
+			BackgroundColor3 = T.Accent, Text = ">", TextColor3 = Color3.fromRGB(255,255,255),
+			Font = Enum.Font.GothamBold, TextSize = 15, BorderSizePixel = 0, ZIndex = 12,
+		}, c)
+		corner(a, 8)
+
+		c.MouseButton1Click:Connect(function()
+			local ok, err = pcall(cb)
+			if ok then setStatus(label .. "  done", T.Success)
+			else warn("[EPIX]", label, err); setStatus(label .. "  FAILED", T.Danger) end
+		end)
+		return c
+	end
+
+	function Presets.selector(label, options, default, cb)
+		local c = new("Frame", {
+			Size = UDim2.new(1, 0, 0, 88), BackgroundColor3 = T.Card,
+			BorderSizePixel = 0, ZIndex = 11,
+		}, Pages[CurrentTab])
+		corner(c, 10)
+		stroke(c, Color3.fromRGB(90, 70, 140), 1, 0.72)
+
+		new("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(14, 10),
+			BackgroundTransparency = 1, Text = label, TextColor3 = T.Text,
+			Font = Enum.Font.GothamBold, TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+		}, c)
+
+		local row = new("Frame", {
+			Size = UDim2.new(1, -28, 0, 34), Position = UDim2.fromOffset(14, 40),
+			BackgroundTransparency = 1, ZIndex = 12,
+		}, c)
+		new("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6),
+		}, row)
+
+		local buttons = {}
+		local function refresh()
+			for k, b in pairs(buttons) do
+				b.BackgroundColor3 = (k == CONFIG.Selected and CONFIG.Selected) and T.Accent or T.Card
+				b.TextColor3 = (k == CONFIG.Selected and CONFIG.Selected) and T.Text or T.TextDim
+			end
+		end
+
+		CONFIG.Selected = CONFIG.Selected or {}
+		CONFIG.Selected[label] = default
+
+		for _, opt in ipairs(options) do
+			local b = new("TextButton", {
+				Size = UDim2.fromOffset(0, 30), AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundColor3 = T.Card, Text = opt,
+				TextColor3 = T.TextDim, Font = Enum.Font.Gotham,
+				TextSize = 11, BorderSizePixel = 0, AutoButtonColor = false, ZIndex = 13,
+			}, row)
+			corner(b, 8)
+			pad(b, 0, 12, 0, 12)
+			buttons[opt] = b
+			b.MouseButton1Click:Connect(function()
+				CONFIG.Selected[label] = opt
+				refresh()
+				pcall(cb, opt)
+			end)
+		end
+		refresh()
+		return c
+	end
+
+	EPIX.Presets = Presets
+
+	--========================================================================
+	-- build
+	--========================================================================
+	GUI.Screen = Screen
+	GUI.Main = Main
+	GUI.Content = Content
+	GUI.TabBar = TabBar
+	GUI.Header = Header
+	GUI.Logo = Logo
+	GUI.Footer = Footer
+
+	GUI.registerPage = registerPage
+	GUI.makeTab = makeTab
+	GUI.selectTab = selectTab
+	GUI.Pages = Pages
+	GUI.TabBtns = TabBtns
+
+	GUI.Backdrop = Backdrop
+	GUI.BtnMin = BtnMin
+	GUI.BtnExp = BtnExp
+	GUI.BtnClose = BtnClose
+
+	EPIX.GUI = GUI
+	EPIX.State.GuiRefs.Toggle = function()
+		Main.Visible = not Main.Visible
+	end
+
+	print("[EPIX] GUI builder ready")
+end)
+
+EPIX.register(10, "boot", function()
+	local GUI = EPIX.GUI
+	local Presets = EPIX.Presets
+	local CONFIG = EPIX.CONFIG
+	local T = EPIX.T
+
+	--========================================================================
+	-- populate tabs
+	--========================================================================
+	GUI.registerPage("Combat")
+	GUI.registerPage("Silent")
+	GUI.registerPage("ESP")
+	GUI.registerPage("Autofarm")
+	GUI.registerPage("Visuals")
+	GUI.registerPage("Config")
+	GUI.registerPage("About")
+
+	GUI.makeTab("Combat",   "Combat")
+	GUI.makeTab("Silent",   "Silent")
+	GUI.makeTab("ESP",      "ESP")
+	GUI.makeTab("Autofarm", "Farm")
+	GUI.makeTab("Visuals",  "Visuals")
+	GUI.makeTab("Config",   "Config")
+	GUI.makeTab("About",    "About")
+
+	--========================================================================
+	-- COMBAT
+	--========================================================================
+	GUI.selectTab("Combat")
+
+	Presets.toggle("Aimbot", "camera aim at nearest target", false, function(on)
+		CONFIG.Aimbot.Enabled = on
+		if on then EPIX.Aimbot.start() end
+	end)
+
+	Presets.toggle("Auto Fire", "fires when target locked", false, function(on)
+		CONFIG.Aimbot.AutoFire = on
+	end)
+
+	Presets.selector("Hit Part", {"Head", "Torso", "HeadTorso"}, "Head", function(v)
+		CONFIG.Aimbot.HitPart = v
+		CONFIG.Aimbot.AutoFireMode = (v == "Head") and "Head" or "HeadTorso"
+	end)
+
+	Presets.toggle("Team Check", "skip teammates", true, function(on)
+		CONFIG.Aimbot.TeamCheck = on
+	end)
+
+	Presets.toggle("Wall Check", "skip behind walls", true, function(on)
+		CONFIG.Aimbot.WallCheck = on
+	end)
+
+	Presets.toggle("Cam Track", "camera locks to nearest hostile", false, function(on)
+		CONFIG.Aimbot.CamTrack = on
+	end)
+
+	Presets.slider("FOV", 20, 400, 120, function(v)
+		CONFIG.Aimbot.FOV = v
+	end)
+
+	Presets.slider("Smoothing %", 5, 100, 18, function(v)
+		CONFIG.Aimbot.Smoothing = v / 100
+	end)
+
+	Presets.slider("Auto Fire Rate (ms)", 20, 400, 80, function(v)
+		CONFIG.Aimbot.AutoFireRate = v / 1000
+	end)
+
+	Presets.slider("Max Distance", 50, 2000, 500, function(v)
+		CONFIG.Aimbot.MaxDist = v
+	end)
+
+	--========================================================================
+	-- SILENT
+	--========================================================================
+	GUI.selectTab("Silent")
+
+	Presets.toggle("Silent Aim", "spoofs shot raycast to target", false, function(on)
+		CONFIG.Silent.Enabled = on
+		if on then EPIX.Silent.start() else EPIX.Silent.stop() end
+	end)
+
+	Presets.selector("Silent Hit Part", {"Head", "Torso", "HeadTorso"}, "Head", function(v)
+		CONFIG.Silent.HitPart = (v == "HeadTorso") and "HeadTorso" or v
+	end)
+
+	Presets.toggle("Silent Team Check", "skip teammates", true, function(on)
+		CONFIG.Silent.TeamCheck = on
+	end)
+
+	Presets.toggle("Silent Wall Check", "skip behind walls", true, function(on)
+		CONFIG.Silent.WallCheck = on
+	end)
+
+	Presets.slider("Silent FOV", 20, 500, 150, function(v)
+		CONFIG.Silent.FOV = v
+	end)
+
+	Presets.slider("Prediction %", 0, 100, 16, function(v)
+		CONFIG.Silent.PredAmt = v / 100
+	end)
+
+	--========================================================================
+	-- ESP
+	--========================================================================
+	GUI.selectTab("ESP")
+
+	Presets.toggle("ESP Enabled", "master toggle", false, function(on)
+		CONFIG.ESP.Enabled = on
+		if on then EPIX.ESP.start() else EPIX.ESP.stop() end
+	end)
+
+	Presets.toggle("Box", "bounding box around player", true, function(on)
+		CONFIG.ESP.Box = on
+	end)
+
+	Presets.selector("Box Style", {"Corner", "Full"}, "Corner", function(v)
+		CONFIG.ESP.BoxStyle = v
+	end)
+
+	Presets.toggle("Name", "player username", true, function(on)
+		CONFIG.ESP.Name = on
+	end)
+
+	Presets.toggle("Distance", "distance label", true, function(on)
+		CONFIG.ESP.Distance = on
+	end)
+
+	Presets.toggle("Health Bar", "vertical HP indicator", true, function(on)
+		CONFIG.ESP.HealthBar = on
+	end)
+
+	Presets.toggle("Outline", "outer stroke for visibility", true, function(on)
+		CONFIG.ESP.Outline = on
+	end)
+
+	Presets.toggle("Skeleton", "bone chains", true, function(on)
+		CONFIG.ESP.Skeleton = on
+	end)
+
+	Presets.toggle("Chams", "filled overlay", false, function(on)
+		CONFIG.ESP.Chams = on
+	end)
+
+	Presets.toggle("Team Check", "skip teammates", true, function(on)
+		CONFIG.ESP.TeamCheck = on
+	end)
+
+	Presets.slider("Max Distance", 50, 5000, 1000, function(v)
+		CONFIG.ESP.MaxDist = v
+	end)
+
+	Presets.slider("Text Size", 8, 24, 13, function(v)
+		CONFIG.ESP.TextSize = v
+		EPIX.ESP.refreshStyle()
+	end)
+
+	Presets.action("Refresh ESP Style", "apply colors & sizes", function()
+		EPIX.ESP.refreshStyle()
+	end)
+
+	--========================================================================
+	-- AUTOFARM
+	--========================================================================
+	GUI.selectTab("Autofarm")
+
+	Presets.toggle("Autofarm", "ride player + headshot + hop", false, function(on)
+		CONFIG.Autofarm.Enabled = on
+		if on then EPIX.Autofarm.start() else EPIX.Autofarm.stop() end
+	end)
+
+	Presets.toggle("Team Check", "skip teammates", true, function(on)
+		CONFIG.Autofarm.TeamCheck = on
+	end)
+
+	Presets.slider("Range", 50, 1000, 300, function(v)
+		CONFIG.Autofarm.Range = v
+	end)
+
+	Presets.slider("Hop Delay (ms)", 100, 1500, 350, function(v)
+		CONFIG.Autofarm.HopDelay = v / 1000
+	end)
+
+	Presets.slider("Kill Delay (ms)", 100, 2000, 500, function(v)
+		CONFIG.Autofarm.KillDelay = v / 1000
+	end)
+
+	Presets.slider("Max Cycles (0=inf)", 0, 100, 0, function(v)
+		CONFIG.Autofarm.MaxCycles = v
+	end)
+
+	--========================================================================
+	-- VISUALS
+	--========================================================================
+	GUI.selectTab("Visuals")
+
+	Presets.toggle("Bunny Hop", "auto jump on landing", false, function(on)
+		CONFIG.BunnyHop.Enabled = on
+		if on then
+			if EPIX.State.BHop_Conn then EPIX.State.BHop_Conn:Disconnect() end
+			EPIX.State.BHop_Conn = EPIX.S.RunService.Heartbeat:Connect(function()
+				if not CONFIG.BunnyHop.Enabled then return end
+				local hum = EPIX.Entity.getHum(EPIX.LP)
+				if hum and hum:GetState() == Enum.HumanoidStateType.Landed then
+					hum:ChangeState(Enum.HumanoidStateType.Jumping)
+				end
+			end)
+		else
+			if EPIX.State.BHop_Conn then
+				EPIX.State.BHop_Conn:Disconnect()
+				EPIX.State.BHop_Conn = nil
+			end
+		end
+	end)
+
+	Presets.toggle("Speed Bypass", "increased walkspeed", false, function(on)
+		CONFIG.Speed.Enabled = on
+		local hum = EPIX.Entity.getHum(EPIX.LP)
+		if hum then hum.WalkSpeed = on and CONFIG.Speed.Value or 16 end
+	end)
+
+	Presets.slider("Speed Value", 16, 200, 32, function(v)
+		CONFIG.Speed.Value = v
+		if CONFIG.Speed.Enabled then
+			local hum = EPIX.Entity.getHum(EPIX.LP)
+			if hum then hum.WalkSpeed = v end
+		end
+	end)
+
+	Presets.toggle("Client RGB", "rainbow on your own stuff", false, function(on)
+		CONFIG.ClientRGB.Enabled = on
+		if on then EPIX.RGB.start() else EPIX.RGB.stop() end
+	end)
+
+	Presets.slider("RGB Speed", 1, 20, 2, function(v)
+		CONFIG.ClientRGB.Speed = v / 10
+	end)
+
+	Presets.toggle("Fullbright", "boost lighting", false, function(on)
+		CONFIG.Visuals.Fullbright = on
+		EPIX.Visuals.apply()
+	end)
+
+	Presets.toggle("No Fog", "remove fog", false, function(on)
+		CONFIG.Visuals.NoFog = on
+		EPIX.Visuals.apply()
+	end)
+
+	Presets.toggle("Potato Graphics", "hide grass, trees, particles", false, function(on)
+		CONFIG.Potato.Enabled = on
+		if on then EPIX.Potato.apply() else EPIX.Potato.restore() end
+	end)
+
+	Presets.toggle("Asset Culler", "hide far buildings", false, function(on)
+		CONFIG.Culler.Enabled = on
+		if on then EPIX.Culler.start() else EPIX.Culler.stop() end
+	end)
+
+	Presets.slider("Culler Range", 100, 2000, 400, function(v)
+		CONFIG.Culler.MaxDist = v
+	end)
+
+	Presets.toggle("Low Memory", "gc every heartbeat", false, function(on)
+		CONFIG.Optimize.LowMem = on
+		if on then EPIX.Optimize.start() else EPIX.Optimize.stop() end
+	end)
+
+	--========================================================================
+	-- CONFIG (theme editor + save/load)
+	--========================================================================
+	GUI.selectTab("Config")
+
+	Presets.action("Save Config", "persist settings", function()
+		local data = EPIX.S.HttpService:JSONEncode(CONFIG)
+		if type(writefile) == "function" then
+			pcall(writefile, "epix_backfire_v1.json", data)
+		end
+	end)
+
+	Presets.action("Load Config", "restore last session", function()
+		if type(readfile) == "function" and type(isfile) == "function" and isfile("epix_backfire_v1.json") then
+			local raw = readfile("epix_backfire_v1.json")
+			local ok, data = pcall(EPIX.S.HttpService.JSONDecode, EPIX.S.HttpService, raw)
+			if ok and type(data) == "table" then
+				for k, v in pairs(data) do
+					if type(v) == "table" and type(CONFIG[k]) == "table" then
+						for kk, vv in pairs(v) do CONFIG[k][kk] = vv end
+					else
+						CONFIG[k] = v
+					end
+				end
+			end
+		end
+	end)
+
+	Presets.action("Reset ESP Colors", "default purple", function()
+		CONFIG.ESP.BoxColor = Color3.fromRGB(180, 130, 255)
+		CONFIG.ESP.OutlineColor = Color3.fromRGB(10, 10, 14)
+		CONFIG.ESP.FilledColor = Color3.fromRGB(180, 130, 255)
+		EPIX.ESP.refreshStyle()
+	end)
+
+	Presets.action("Reset Theme", "default accent", function()
+		EPIX.T.Accent = Color3.fromRGB(168, 100, 255)
+		EPIX.T.Accent2 = Color3.fromRGB(255, 90, 180)
+	end)
+
+	--========================================================================
+	-- ABOUT
+	--========================================================================
+	GUI.selectTab("About")
+
+	local function infoRow(k, v, code)
+		local c = new("Frame", {
+			Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = T.Card,
+			BorderSizePixel = 0, ZIndex = 11,
+		}, GUI.Pages["About"])
+		corner(c, 8)
+		stroke(c, Color3.fromRGB(90, 70, 140), 1, 0.75)
+		new("TextLabel", {
+			Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromOffset(12, 0),
+			BackgroundTransparency = 1, Text = k, TextColor3 = T.TextDim,
+			Font = Enum.Font.Gotham, TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+		}, c)
+		new("TextLabel", {
+			Size = UDim2.new(0.5, -12, 1, 0), Position = UDim2.new(0.5, 0, 0, 0),
+			BackgroundTransparency = 1, Text = v, TextColor3 = code and T.Accent or T.Text,
+			Font = code and Enum.Font.Code or Enum.Font.GothamBold,
+			TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 12,
+		}, c)
+	end
+
+	infoRow("script", EPIX.Meta.Name .. " " .. EPIX.Meta.Version)
+	infoRow("credit", EPIX.Meta.Credit)
+	infoRow("build", EPIX.Meta.Build, true)
+	infoRow("author", EPIX.Meta.Author)
+	infoRow("player", EPIX.LP.Name)
+	infoRow("game", tostring(game.PlaceId), true)
+	infoRow("executor", (type(identifyexecutor) == "function" and select(1, identifyexecutor())) or "unknown")
+
+	Presets.action("Print Diagnostics", "console dump", function()
+		print("[EPIX] === diagnostics ===")
+		print("  executor:", (type(identifyexecutor) == "function" and select(1, identifyexecutor())) or "unknown")
+		print("  placeId:", game.PlaceId)
+		print("  players:", #EPIX.S.Players:GetPlayers())
+		print("  chunks loaded:", #EPIX.Order)
+	end)
+
+	--========================================================================
+	-- WINDOW CONTROLS
+	--========================================================================
+	local Main = GUI.Main
+	local drag = { active = false, startPos = nil, startFrame = nil }
+
+	local function beginDrag(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1
+		or i.UserInputType == Enum.UserInputType.Touch then
+			drag.active = true
+			drag.startPos = i.Position
+			drag.startFrame = Main.Position
+		end
+	end
+	GUI.Header.InputBegan:Connect(beginDrag)
+	GUI.Logo.InputBegan:Connect(beginDrag)
+	EPIX.S.UserInputService.InputChanged:Connect(function(i)
+		if not drag.active then return end
+		if i.UserInputType == Enum.UserInputType.MouseMovement
+		or i.UserInputType == Enum.UserInputType.Touch then
+			local d = i.Position - drag.startPos
+			Main.Position = UDim2.new(
+				drag.startFrame.X.Scale, drag.startFrame.X.Offset + d.X,
+				drag.startFrame.Y.Scale, drag.startFrame.Y.Offset + d.Y)
+		end
+	end)
+	EPIX.S.UserInputService.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1
+		or i.UserInputType == Enum.UserInputType.Touch then
+			drag.active = false
+		end
+	end)
+
+	local MinState = { minimized = false, expanded = false }
+
+	GUI.BtnMin.MouseButton1Click:Connect(function()
+		MinState.minimized = not MinState.minimized
+		GUI.TabBar.Visible = not MinState.minimized
+		GUI.Content.Visible = not MinState.minimized
+		GUI.Footer.Visible = not MinState.minimized
+		Main.Size = MinState.minimized
+			and UDim2.fromOffset(340, 68)
+			or UDim2.fromOffset(420, 540)
+	end)
+
+	GUI.BtnExp.MouseButton1Click:Connect(function()
+		MinState.expanded = not MinState.expanded
+		local vps = EPIX.S.Workspace.CurrentCamera
+			and EPIX.S.Workspace.CurrentCamera.ViewportSize
+			or Vector2.new(1280, 720)
+		local w = math.min(vps.X - 60, 760)
+		local h = math.min(vps.Y - 80, 680)
+		GUI.Backdrop.Visible = MinState.expanded
+		if MinState.expanded then
+			Main.Size = UDim2.fromOffset(w, h)
+			Main.Position = UDim2.new(0.5, -w/2, 0.5, -h/2)
+		else
+			Main.Size = UDim2.fromOffset(420, 540)
+			Main.Position = UDim2.new(0, 40, 0.5, -270)
+		end
+	end)
+
+	GUI.BtnClose.MouseButton1Click:Connect(function()
+		EPIX.ESP.stop()
+		EPIX.Aimbot.stop()
+		EPIX.Silent.stop()
+		EPIX.Autofarm.stop()
+		EPIX.RGB.stop()
+		EPIX.Culler.stop()
+		EPIX.Optimize.stop()
+		EPIX.untrackAll()
+		GUI.Screen:Destroy()
+		print("[EPIX] unloaded")
+	end)
+
+	GUI.Backdrop.MouseButton1Click:Connect(function()
+		if MinState.expanded then
+			MinState.expanded = false
+			GUI.Backdrop.Visible = false
+			Main.Size = UDim2.fromOffset(420, 540)
+			Main.Position = UDim2.new(0, 40, 0.5, -270)
+		end
+	end)
+
+	-- keybind toggle
+	EPIX.S.UserInputService.InputBegan:Connect(function(i, gp)
+		if gp then return end
+		if i.KeyCode == CONFIG.Keybind or i.KeyCode == CONFIG.KeybindAlt then
+			Main.Visible = not Main.Visible
+		end
+	end)
+
+	--========================================================================
+	-- final boot
+	--========================================================================
+	GUI.selectTab("Combat")
+	Main.Visible = true
+	GUI.setStatus(("[%s %s] ready  |  credit: %s")
+		:format(EPIX.Meta.Name, EPIX.Meta.Version, EPIX.Meta.Credit), T.Success)
+
+	print(("[EPIX] %s %s online  ·  credit to %s")
+		:format(EPIX.Meta.Name, EPIX.Meta.Version, EPIX.Meta.Credit))
+	print(("[EPIX] keybinds: %s / %s toggle UI")
+		:format(CONFIG.Keybind.Name, CONFIG.KeybindAlt.Name))
+end)
